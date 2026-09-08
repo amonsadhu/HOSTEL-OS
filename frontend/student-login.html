@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HostelOS — Student Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --blue:#1a2e5a;--blue-mid:#2d4a8a;--blue-light:#e8edf7;
+  --brown:#7a4f2d;--brown-mid:#a0673a;--brown-light:#f5ede4;
+  --bg:#f7f5f2;--border:#e5e0d8;--muted:#6b7280;--muted2:#9ca3af;
+  --sans:'Montserrat',sans-serif;--body:'Open Sans',sans-serif;
+}
+body{font-family:var(--body);background:var(--bg);min-height:100vh;display:grid;grid-template-columns:1fr 1fr;}
+.left-panel{
+  background:var(--brown);
+  display:flex;flex-direction:column;justify-content:center;
+  padding:60px;position:relative;overflow:hidden;
+}
+.left-panel::before{
+  content:'';position:absolute;bottom:-80px;right:-80px;
+  width:400px;height:400px;border-radius:50%;
+  background:rgba(255,255,255,0.05);
+}
+.lp-logo{display:flex;align-items:center;gap:12px;margin-bottom:56px;}
+.lp-mark{width:40px;height:40px;background:white;border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:var(--sans);font-size:20px;font-weight:900;color:var(--brown);}
+.lp-name{font-family:var(--sans);font-size:22px;font-weight:800;color:white;letter-spacing:-0.5px;}
+.lp-h1{font-family:var(--sans);font-size:36px;font-weight:900;color:white;letter-spacing:-1.5px;line-height:1.1;margin-bottom:16px;}
+.lp-h1 span{color:rgba(255,255,255,0.45);}
+.lp-sub{font-family:var(--body);font-size:14px;color:rgba(255,255,255,0.6);line-height:1.7;max-width:340px;}
+.lp-features{margin-top:48px;display:flex;flex-direction:column;gap:14px;}
+.lp-feat{display:flex;align-items:center;gap:12px;font-family:var(--body);font-size:13px;color:rgba(255,255,255,0.6);}
+.lp-feat-icon{width:28px;height:28px;background:rgba(255,255,255,0.12);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
+
+.right-panel{display:flex;align-items:center;justify-content:center;padding:40px;}
+.login-box{width:100%;max-width:400px;}
+.lb-title{font-family:var(--sans);font-size:26px;font-weight:800;color:var(--blue);letter-spacing:-0.8px;margin-bottom:6px;}
+.lb-sub{font-family:var(--body);font-size:13px;color:var(--muted);margin-bottom:36px;}
+.form-group{margin-bottom:18px;}
+label{font-family:var(--sans);font-size:11px;font-weight:700;color:var(--blue);letter-spacing:0.06em;text-transform:uppercase;display:block;margin-bottom:7px;}
+.input-wrap{position:relative;}
+.input-wrap .i-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:15px;pointer-events:none;}
+input{width:100%;font-family:var(--body);font-size:14px;padding:12px 14px 12px 42px;border:1.5px solid var(--border);border-radius:8px;background:white;color:#1a1a2e;outline:none;transition:border-color 0.2s,box-shadow 0.2s;}
+input:focus{border-color:var(--brown);box-shadow:0 0 0 3px rgba(122,79,45,0.08);}
+.toggle-pass{position:absolute;right:13px;top:50%;transform:translateY(-50%);font-size:15px;cursor:pointer;color:var(--muted2);background:none;border:none;padding:0;}
+.btn-login{
+  width:100%;background:var(--brown);color:white;
+  font-family:var(--sans);font-size:14px;font-weight:700;
+  padding:14px;border-radius:8px;border:none;cursor:pointer;
+  letter-spacing:0.03em;transition:all 0.2s;margin-top:8px;
+}
+.btn-login:hover{background:var(--brown-mid);transform:translateY(-1px);box-shadow:0 6px 20px rgba(122,79,45,0.3);}
+.btn-login:disabled{opacity:0.7;cursor:not-allowed;transform:none;}
+.error-msg{background:#fdecea;border:1px solid #f5c6c2;color:#9e2b22;font-family:var(--body);font-size:12px;padding:10px 14px;border-radius:7px;margin-bottom:16px;display:none;}
+.info-msg{background:var(--blue-light);border:1px solid #c5d3f0;color:var(--blue-mid);font-family:var(--body);font-size:12px;padding:10px 14px;border-radius:7px;margin-bottom:16px;}
+.admin-link{text-align:center;margin-top:28px;font-family:var(--body);font-size:13px;color:var(--muted);}
+.admin-link a{color:var(--blue);font-weight:600;text-decoration:none;}
+.admin-link a:hover{text-decoration:underline;}
+.demo-creds{background:var(--brown-light);border:1px solid #dfc0a0;border-radius:8px;padding:12px 14px;margin-top:24px;}
+.dc-title{font-family:var(--sans);font-size:10px;font-weight:700;color:var(--brown);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;}
+.dc-row{font-family:var(--body);font-size:11px;color:var(--muted);margin-bottom:3px;}
+.dc-row code{background:white;padding:2px 6px;border-radius:4px;font-size:11px;color:var(--brown);font-weight:600;}
+
+/* Change password panel */
+.change-pass-panel{display:none;}
+.cp-note{background:var(--brown-light);border:1px solid #dfc0a0;border-radius:8px;padding:12px 14px;margin-bottom:20px;font-family:var(--body);font-size:12px;color:var(--brown);}
+
+@media(max-width:768px){body{grid-template-columns:1fr;}.left-panel{display:none;}.right-panel{padding:24px;}}
+</style>
+</head>
+<body>
+
+<div class="left-panel">
+  <div class="lp-logo">
+    <div class="lp-mark">H</div>
+    <span class="lp-name">HostelOS</span>
+  </div>
+  <h1 class="lp-h1">Your hostel, <span>at your fingertips.</span></h1>
+  <p class="lp-sub">Access your room details, check fee status, raise complaints, and view your attendance — all in one place.</p>
+  <div class="lp-features">
+    <div class="lp-feat"><div class="lp-feat-icon">🏠</div>View your room & block details</div>
+    <div class="lp-feat"><div class="lp-feat-icon">💳</div>Check fee status & payment history</div>
+    <div class="lp-feat"><div class="lp-feat-icon">📋</div>Raise & track complaints</div>
+    <div class="lp-feat"><div class="lp-feat-icon">📅</div>View your attendance record</div>
+  </div>
+</div>
+
+<div class="right-panel">
+  <div class="login-box">
+
+    <!-- LOGIN PANEL -->
+    <div id="login-panel">
+      <div class="lb-title">Student Login</div>
+      <div class="lb-sub">Sign in with your registered email address</div>
+
+      <div class="info-msg">💡 Your login credentials are provided by the hostel admin when you register.</div>
+      <div class="error-msg" id="error-msg"></div>
+
+      <div class="form-group">
+        <label>Email Address</label>
+        <div class="input-wrap">
+          <span class="i-icon">✉️</span>
+          <input type="email" id="email" placeholder="yourname@student.com" autocomplete="email">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <div class="input-wrap">
+          <span class="i-icon">🔒</span>
+          <input type="password" id="password" placeholder="Enter your password" autocomplete="current-password">
+          <button class="toggle-pass" onclick="togglePass('password','toggle1')" id="toggle1">👁</button>
+        </div>
+      </div>
+      <button class="btn-login" id="login-btn" onclick="handleLogin()">Sign In</button>
+      <div class="admin-link">Admin? <a href="admin-login.html">Admin login →</a></div>
+      <div class="demo-creds">
+        <div class="dc-title">Demo Student Credentials</div>
+        <div class="dc-row"><code>arjun.mehra@student.com</code> / <code>arjun3210</code></div>
+        <div class="dc-row"><code>priya.sharma@student.com</code> / <code>priya3211</code></div>
+        <div class="dc-row"><code>sneha.iyer@student.com</code> / <code>sneha3213</code></div>
+      </div>
+    </div>
+
+    <!-- CHANGE PASSWORD PANEL (shown on first login) -->
+    <div id="change-pass-panel" class="change-pass-panel">
+      <div class="lb-title">Set New Password</div>
+      <div class="lb-sub">Welcome! Please set a new password to continue.</div>
+      <div class="cp-note">🔐 This is your first login. Please set a new password for security.</div>
+      <div class="error-msg" id="cp-error-msg"></div>
+      <div class="form-group">
+        <label>New Password</label>
+        <div class="input-wrap">
+          <span class="i-icon">🔒</span>
+          <input type="password" id="new-password" placeholder="Min. 6 characters">
+          <button class="toggle-pass" onclick="togglePass('new-password','toggle2')" id="toggle2">👁</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Confirm New Password</label>
+        <div class="input-wrap">
+          <span class="i-icon">🔒</span>
+          <input type="password" id="confirm-password" placeholder="Repeat your password">
+        </div>
+      </div>
+      <button class="btn-login" onclick="handleChangePassword()">Set Password & Continue</button>
+    </div>
+
+  </div>
+</div>
+
+
+<script>
+/* ═══════════════════════════════════════════
+   API INTEGRATION — student-login.html
+   ═══════════════════════════════════════════
+   POST /api/auth/student/login
+   Body: { email, password }
+   Response: { success, token, userType:'student', user }
+
+   If user.firstLogin === true → show change password panel
+   POST /api/auth/student/change-password
+   Headers: { Authorization: Bearer <token> }
+   Body: { currentPassword, newPassword }
+*/
+
+const API_BASE = 'http://localhost:5000/api';
+let tempToken = null;
+
+function togglePass(inputId, btnId) {
+  const input = document.getElementById(inputId);
+  const btn   = document.getElementById(btnId);
+  if (input.type === 'password') { input.type = 'text'; btn.textContent = '🙈'; }
+  else { input.type = 'password'; btn.textContent = '👁'; }
+  
+}
+
+function showError(elId, msg) {
+  const el = document.getElementById(elId);
+  el.textContent = msg; el.style.display = 'block';
+}
+
+function hideError(elId) {
+  document.getElementById(elId).style.display = 'none';
+}
+
+async function handleLogin() {
+  const email    = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const btn      = document.getElementById('login-btn');
+
+  hideError('error-msg');
+  if (!email || !password) { showError('error-msg', 'Please enter email and password.'); return; }
+
+  btn.disabled = true; btn.textContent = 'Signing in…';
+
+  try {
+    const res = await fetch(`${API_BASE}/auth/student/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      showError('error-msg', data.message || 'Invalid credentials.'); return;
+    }
+
+    localStorage.setItem('hostelos_token', data.token);
+    localStorage.setItem('hostelos_user',  JSON.stringify(data.user));
+    localStorage.setItem('hostelos_type',  'student');
+
+    if (data.user.firstLogin) {
+      // Show change password screen
+      tempToken = data.token;
+      document.getElementById('login-panel').style.display = 'none';
+      document.getElementById('change-pass-panel').style.display = 'block';
+    } else {
+      window.location.href = 'student-dashboard.html';
+    }
+
+  } catch (err) {
+    console.warn('API unavailable, demo mode:', err.message);
+    demoLogin(email, password);
+
+  } finally {
+    btn.disabled = false; btn.textContent = 'Sign In';
+  }
+}
+
+async function handleChangePassword() {
+  const newPass  = document.getElementById('new-password').value;
+  const confirm  = document.getElementById('confirm-password').value;
+
+  hideError('cp-error-msg');
+  if (newPass.length < 6) { showError('cp-error-msg', 'Password must be at least 6 characters.'); return; }
+  if (newPass !== confirm) { showError('cp-error-msg', 'Passwords do not match.'); return; }
+
+  try {
+    const user = JSON.parse(localStorage.getItem('hostelos_user') || '{}');
+    const res = await fetch(`${API_BASE}/auth/student/change-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + (tempToken || localStorage.getItem('hostelos_token'))
+      },
+      body: JSON.stringify({ currentPassword: document.getElementById('password').value, newPassword: newPass })
+    });
+    const data = await res.json();
+    if (!res.ok) { showError('cp-error-msg', data.message || 'Error changing password.'); return; }
+    localStorage.setItem('hostelos_token', data.token);
+    window.location.href = 'student-dashboard.html';
+  } catch (err) {
+    // Demo fallback
+    window.location.href = 'student-dashboard.html';
+  }
+}
+
+function demoLogin(email, password) {
+  const DEMO = {
+    'arjun.mehra@student.com':  { password:'arjun3210',  name:'Arjun Mehra',  room:'A-204', block:'A', status:'Active', firstLogin:false },
+    'priya.sharma@student.com': { password:'priya3211',  name:'Priya Sharma', room:'B-112', block:'B', status:'Active', firstLogin:false },
+    'sneha.iyer@student.com':   { password:'sneha3213',  name:'Sneha Iyer',   room:'A-106', block:'A', status:'Inactive', firstLogin:true },
+  };
+  const user = DEMO[email];
+  if (!user || user.password !== password) { showError('error-msg', 'Invalid email or password.'); return; }
+  localStorage.setItem('hostelos_token', 'demo_student_token');
+  localStorage.setItem('hostelos_user',  JSON.stringify({ name: user.name, email, ...user }));
+  localStorage.setItem('hostelos_type',  'student');
+  if (user.firstLogin) {
+    document.getElementById('login-panel').style.display = 'none';
+    document.getElementById('change-pass-panel').style.display = 'block';
+  } else {
+    window.location.href = 'index.html';
+  }
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); });
+</script>
+</body>
+</html>
+

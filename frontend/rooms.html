@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HostelOS — Room Allocation</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Open+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+.rooms-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:14px; padding:20px; }
+.room-card {
+  border:2px solid var(--border); border-radius:12px; padding:16px;
+  cursor:pointer; transition:all 0.2s; position:relative; background:white;
+}
+.room-card:hover { transform:translateY(-2px); box-shadow:var(--shadow); }
+.room-card.occupied { border-color:var(--blue); background:var(--blue-light); }
+.room-card.available { border-color:var(--border); }
+.room-card.maintenance { border-color:var(--yellow); background:var(--yellow-bg); }
+.room-num { font-family:var(--sans); font-size:18px; font-weight:900; color:var(--blue); letter-spacing:-0.5px; }
+.room-type { font-family:var(--body); font-size:11px; color:var(--muted); margin-top:2px; }
+.room-occupants { margin-top:10px; }
+.occupant-chip { display:flex;align-items:center;gap:6px;margin-bottom:5px; }
+.occupant-dot { width:6px;height:6px;border-radius:50%;background:var(--blue);flex-shrink:0; }
+.occupant-name { font-family:var(--body);font-size:11px;color:var(--text); }
+.room-empty-slot { display:flex;align-items:center;gap:6px;margin-bottom:5px; }
+.empty-dot { width:6px;height:6px;border-radius:50%;border:1px dashed var(--muted2);flex-shrink:0; }
+.empty-txt { font-family:var(--body);font-size:11px;color:var(--muted2);font-style:italic; }
+.room-status { position:absolute;top:12px;right:12px; }
+.block-tab { padding:8px 18px;border-radius:8px;font-family:var(--sans);font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid var(--border);background:white;color:var(--muted);transition:all 0.15s; }
+.block-tab.active,.block-tab:hover { background:var(--blue);color:white;border-color:var(--blue); }
+.tabs { display:flex;gap:8px;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap; }
+</style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-logo"><div class="logo-mark">H</div><span>HostelOS</span></div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Main</div>
+    <a class="nav-item" href="index.html"><span class="ni">📊</span> Dashboard</a>
+    <a class="nav-item" href="students.html"><span class="ni">👥</span> Students</a>
+    <a class="nav-item active" href="rooms.html"><span class="ni">🏠</span> Rooms</a>
+    <a class="nav-item" href="fees.html"><span class="ni">💳</span> Fees</a>
+    <div class="nav-section-label">Manage</div>
+    <a class="nav-item" href="complaints.html"><span class="ni">📋</span> Complaints <span class="nav-badge">3</span></a>
+    <a class="nav-item" href="attendance.html"><span class="ni">📅</span> Attendance</a>
+    <a class="nav-item" href="notifications.html"><span class="ni">🔔</span> Notifications</a>
+  </nav>
+  <div class="sidebar-footer"><div class="sidebar-user"><div class="user-avatar">AD</div><div><div class="user-name">Admin User</div><div class="user-role">Super Administrator</div></div></div></div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="page-title">Rooms</div>
+      <div class="breadcrumb">— Allocation & Availability</div>
+    </div>
+    <div class="topbar-right">
+      <button class="topbar-btn secondary" onclick="loadAllocateModal()">Allocate Room</button>
+      <button class="topbar-btn" onclick="openModal('add-room-modal')">+ Add Room</button>
+    </div>
+  </div>
+
+  <div class="page-content">
+    <!-- API: GET /api/rooms/summary -->
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-top"><span class="kpi-label">Total Rooms</span><span class="kpi-icon">🏠</span></div><div class="kpi-val">240</div><div class="kpi-sub">Across 4 blocks</div></div>
+      <div class="kpi"><div class="kpi-top"><span class="kpi-label">Occupied</span><span class="kpi-icon">✅</span></div><div class="kpi-val green">178</div><div class="kpi-sub up">74.2% occupancy</div></div>
+      <div class="kpi"><div class="kpi-top"><span class="kpi-label">Available</span><span class="kpi-icon">🟢</span></div><div class="kpi-val brown">54</div><div class="kpi-sub">Ready to allocate</div></div>
+      <div class="kpi"><div class="kpi-top"><span class="kpi-label">Maintenance</span><span class="kpi-icon">🔧</span></div><div class="kpi-val red">8</div><div class="kpi-sub down">Under repair</div></div>
+    </div>
+
+    <!-- Room Grid: API: GET /api/rooms?block=A -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Room Map</span>
+        <div style="display:flex;gap:10px;align-items:center;font-family:var(--body);font-size:11px;color:var(--muted);">
+          <span>🟦 Occupied</span><span>⬜ Available</span><span>🟨 Maintenance</span>
+        </div>
+      </div>
+      <div class="tabs" id="block-tabs">
+        <button class="block-tab active" onclick="selectBlock('A',this)">Block A</button>
+        <button class="block-tab" onclick="selectBlock('B',this)">Block B</button>
+        <button class="block-tab" onclick="selectBlock('C',this)">Block C</button>
+        <button class="block-tab" onclick="selectBlock('D',this)">Block D</button>
+      </div>
+      <div class="rooms-grid" id="rooms-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ALLOCATE ROOM MODAL -->
+<div class="modal-overlay" id="allocate-modal">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">Allocate Room</span><button class="modal-close" onclick="closeModal('allocate-modal')">✕</button></div>
+    <div class="modal-body">
+      <!-- API: POST /api/rooms/allocate -->
+     <div class="form-grid">
+        <div class="form-group"><label>Student *</label><select id="alloc-student"><option value="">Select student…</option></select></div>
+        <div class="form-group"><label>Room *</label><select id="alloc-room"><option value="">Select room…</option></select></div>
+        <div class="form-group"><label>From Date</label><input type="date" id="alloc-from"></div>
+        <div class="form-group"><label>To Date</label><input type="date" id="alloc-to"></div>
+        <div class="form-group full"><label>Notes</label><textarea id="alloc-notes" placeholder="Any special requirements…"></textarea></div>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="submitAllocation()">Confirm Allocation</button>
+      <button class="btn-secondary" onclick="closeModal('allocate-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ROOM DETAIL MODAL -->
+<div class="modal-overlay" id="room-detail-modal">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title" id="rd-title">Room Details</span><button class="modal-close" onclick="closeModal('room-detail-modal')">✕</button></div>
+    <div class="modal-body" id="rd-body"></div>
+    <div class="form-actions"><button class="btn-primary" onclick="closeModal('room-detail-modal')">Close</button></div>
+  </div>
+</div>
+
+<!-- ADD ROOM MODAL -->
+<div class="modal-overlay" id="add-room-modal">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">Add New Room</span><button class="modal-close" onclick="closeModal('add-room-modal')">✕</button></div>
+    <div class="modal-body">
+      <!-- API: POST /api/rooms -->
+      <div class="form-grid">
+        <div class="form-group"><label>Block</label><select><option>Block A</option><option>Block B</option><option>Block C</option><option>Block D</option></select></div>
+        <div class="form-group"><label>Room Number *</label><input type="text" placeholder="e.g. 305"></div>
+        <div class="form-group"><label>Type</label><select><option>Single</option><option>Double</option><option>Triple</option></select></div>
+        <div class="form-group"><label>Floor</label><input type="number" placeholder="1" min="1"></div>
+        <div class="form-group"><label>AC</label><select><option>Non-AC</option><option>AC</option></select></div>
+        <div class="form-group"><label>Monthly Rent (₹)</label><input type="number" placeholder="8000"></div>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="closeModal('add-room-modal');showToast('Room added successfully','success')">Add Room</button>
+      <button class="btn-secondary" onclick="closeModal('add-room-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+
+
+
+const API_BASE = 'http://localhost:5000/api';
+function getToken() { return localStorage.getItem('hostelos_token'); }
+
+async function apiFetch(endpoint, options = {}) {
+  const res = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}`, ...(options.headers || {}) }
+  });
+  if (res.status === 401) { localStorage.clear(); window.location.href = 'admin-login.html'; return null; }
+  return res.json();
+}
+
+let currentBlock = 'A';
+
+async function selectBlock(block, el) {
+  currentBlock = block;
+  document.querySelectorAll('.block-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  await loadRooms(block);
+}
+
+async function loadRooms(block) {
+  const data = await apiFetch(`/rooms?block=${block}`);
+  if (!data) return;
+  renderRooms(data.rooms || []);
+}
+
+function renderRooms(rooms) {
+  const grid = document.getElementById('rooms-grid');
+  if (!rooms.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🏠</div><div class="empty-title">No rooms found</div></div>`;
+    return;
+  }
+  grid.innerHTML = rooms.map(r => {
+    const cls = r.status === 'occupied' ? 'occupied' : r.status === 'maintenance' ? 'maintenance' : 'available';
+    const pillClass = r.status === 'occupied' ? 'pill-blue' : r.status === 'maintenance' ? 'pill-yellow' : 'pill-green';
+    const occupantNames = (r.occupants || []).map(o => `
+      <div class="occupant-chip">
+        <div class="occupant-dot"></div>
+        <div class="occupant-name">${o.firstName} ${o.lastName}</div>
+      </div>`).join('');
+    const emptySlots = Array.from({ length: r.capacity - (r.occupants || []).length }, () => `
+      <div class="room-empty-slot">
+        <div class="empty-dot"></div>
+        <div class="empty-txt">Empty slot</div>
+      </div>`).join('');
+    return `<div class="room-card ${cls}" onclick="viewRoom('${r._id}')">
+      <div class="room-status"><span class="pill ${pillClass}">${r.status}</span></div>
+      <div class="room-num">${r.roomNumber}</div>
+      <div class="room-type">${r.type} · ${(r.occupants || []).length}/${r.capacity} occupied</div>
+      <div class="room-occupants">${occupantNames}${emptySlots}</div>
+    </div>`;
+  }).join('');
+}
+
+async function viewRoom(id) {
+  const data = await apiFetch(`/rooms/${id}`);
+  if (!data || !data.room) return;
+  const r = data.room;
+  document.getElementById('rd-title').textContent = 'Room ' + r.roomNumber;
+  document.getElementById('rd-body').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px;">
+      <div><label style="font-family:var(--sans);font-size:10px;font-weight:700;color:var(--muted2);letter-spacing:0.1em;text-transform:uppercase;display:block;margin-bottom:4px;">Type</label><span>${r.type}</span></div>
+      <div><label style="font-family:var(--sans);font-size:10px;font-weight:700;color:var(--muted2);letter-spacing:0.1em;text-transform:uppercase;display:block;margin-bottom:4px;">Status</label><span class="pill ${r.status === 'occupied' ? 'pill-blue' : r.status === 'maintenance' ? 'pill-yellow' : 'pill-green'}">${r.status}</span></div>
+      <div><label style="font-family:var(--sans);font-size:10px;font-weight:700;color:var(--muted2);letter-spacing:0.1em;text-transform:uppercase;display:block;margin-bottom:4px;">Capacity</label><span>${r.capacity}</span></div>
+      <div><label style="font-family:var(--sans);font-size:10px;font-weight:700;color:var(--muted2);letter-spacing:0.1em;text-transform:uppercase;display:block;margin-bottom:4px;">Rent/Month</label><span>₹${r.monthlyRent?.toLocaleString()}</span></div>
+    </div>
+    <div style="font-family:var(--sans);font-size:11px;font-weight:700;color:var(--blue);margin-bottom:10px;">Current Occupants</div>
+    ${(r.occupants || []).length
+      ? r.occupants.map(o => `<div style="padding:8px 12px;background:var(--bg2);border-radius:8px;margin-bottom:6px;">${o.firstName} ${o.lastName}</div>`).join('')
+      : '<div style="color:var(--muted2);font-style:italic;font-size:13px;">No occupants</div>'
+    }
+    ${r.status === 'available' ? `<div style="margin-top:16px;"><button class="btn-primary" onclick="closeModal('room-detail-modal');loadAllocateModal()">Allocate This Room</button></div>` : ''}`;
+  openModal('room-detail-modal');
+}
+
+async function loadAllocateModal() {
+  const studentData = await apiFetch('/students?limit=100');
+  if (studentData && studentData.students) {
+    const studentSelect = document.getElementById('alloc-student');
+    studentSelect.innerHTML = '<option value="">Select student…</option>';
+    studentData.students.forEach(s => {
+      const option = document.createElement('option');
+      option.value = s._id;
+      option.textContent = `${s.firstName} ${s.lastName} (${s.studentId})`;
+      studentSelect.appendChild(option);
+    });
+  }
+
+  const roomData = await apiFetch('/rooms?status=available');
+  if (roomData && roomData.rooms) {
+    const roomSelect = document.getElementById('alloc-room');
+    roomSelect.innerHTML = '<option value="">Select room…</option>';
+    roomData.rooms.forEach(r => {
+      const option = document.createElement('option');
+      option.value = r._id;
+      option.textContent = `${r.roomNumber} (${r.type}, ${r.capacity - r.occupants.length} slot(s) free)`;
+      roomSelect.appendChild(option);
+    });
+  }
+
+  openModal('allocate-modal');
+}
+
+async function submitAllocation() {
+  const student = document.getElementById('alloc-student').value;
+  const room    = document.getElementById('alloc-room').value;
+  if (!student || !room) { showToast('Please select student and room', 'error'); return; }
+
+  const data = await apiFetch('/rooms/allocate', {
+    method: 'POST',
+    body: JSON.stringify({
+      studentId: student,
+      roomId:    room,
+      fromDate:  document.getElementById('alloc-from').value,
+      toDate:    document.getElementById('alloc-to').value,
+      notes:     document.getElementById('alloc-notes').value
+    })
+  });
+  if (!data) return;
+  if (!data.success) { showToast(data.message, 'error'); return; }
+  closeModal('allocate-modal');
+  showToast('Room allocated successfully', 'success');
+  loadRooms(currentBlock);
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast show ${type}`;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+document.addEventListener('DOMContentLoaded', () => loadRooms('A'));
+</script>
+</body></html>

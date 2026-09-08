@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HostelOS — Fee Management</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Open+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-logo"><div class="logo-mark">H</div><span>HostelOS</span></div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Main</div>
+    <a class="nav-item" href="index.html"><span class="ni">📊</span> Dashboard</a>
+    <a class="nav-item" href="students.html"><span class="ni">👥</span> Students</a>
+    <a class="nav-item" href="rooms.html"><span class="ni">🏠</span> Rooms</a>
+    <a class="nav-item active" href="fees.html"><span class="ni">💳</span> Fees</a>
+    <div class="nav-section-label">Manage</div>
+    <a class="nav-item" href="complaints.html"><span class="ni">📋</span> Complaints <span class="nav-badge">3</span></a>
+    <a class="nav-item" href="attendance.html"><span class="ni">📅</span> Attendance</a>
+    <a class="nav-item" href="notifications.html"><span class="ni">🔔</span> Notifications</a>
+  </nav>
+  <div class="sidebar-footer"><div class="sidebar-user"><div class="user-avatar">AD</div><div><div class="user-name">Admin User</div><div class="user-role">Super Administrator</div></div></div></div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="page-title">Fee Management</div>
+      <div class="breadcrumb">— Payments & Dues</div>
+    </div>
+    <div class="topbar-right">
+      <button class="topbar-btn secondary" onclick="sendBulkReminder()">📨 Send Reminders</button>
+      <button class="topbar-btn" onclick="loadRecordModal()">+ Record Payment</button>
+    </div>
+  </div>
+
+  <div class="page-content">
+    <!-- API: GET /api/fees/summary -->
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-top"><span class="kpi-label">Total Collected</span><span class="kpi-icon">💰</span></div><div class="kpi-val brown" id="kpi-fees">₹0</div><div class="kpi-sub">Till Date/Year</div></div>
+      <div class="kpi"><div class="kpi-top"><span class="kpi-label">Total Records</span><span class="kpi-icon">📋</span></div><div class="kpi-val" id="kpi-total-records">0</div><div class="kpi-sub">Fee entries</div></div>
+  <div class="kpi"><div class="kpi-top"><span class="kpi-label">Total Pending Amount</span><span class="kpi-icon">⏳</span></div><div class="kpi-val red" id="kpi-pending">₹0</div><div class="kpi-sub">Dues</div></div>
+    </div>
+
+    <!-- Fee Records: API: GET /api/fees?page=1&limit=20&status= -->
+    <div class="card">
+      <div class="filter-bar">
+        <input class="search-input" type="text" id="fee-search" placeholder="Search student name or ID…" oninput="filterFees()">
+        <select class="filter-select" id="fee-status" onchange="filterFees()">
+          <option value="">All Status</option>
+          <option value="Paid">Paid</option>
+          <option value="Due">Due</option>
+          <option value="Overdue">Overdue</option>
+        </select>
+       <input class="search-input" type="text" id="fee-month" placeholder="e.g. June 2026" oninput="filterFees()" style="flex:0;width:160px;">
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Student</th><th>ID</th><th>Room</th><th>Amount (₹)</th><th>Due Date</th><th>Paid On</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="fees-table"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RECORD PAYMENT MODAL -->
+<div class="modal-overlay" id="record-modal">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">Record Payment</span><button class="modal-close" onclick="closeModal('record-modal')">✕</button></div>
+    <div class="modal-body">
+      <!-- API: POST /api/fees/payment -->
+      <div class="form-grid">
+        <div class="form-group"><label>Student *</label><select id="pay-student"><option value="">Select student…</option></select></div>
+        <div class="form-group"><label>Amount (₹) *</label><input type="number" id="pay-amount" placeholder="12000"></div>
+        <div class="form-group"><label>Payment Mode</label><select id="pay-mode"><option>UPI</option><option>Cash</option><option>Bank Transfer</option><option>Cheque</option><option>Card</option></select></div>
+        <div class="form-group"><label>Payment Date</label><input type="date" id="pay-date"></div>
+        <div class="form-group"><label>Transaction ID</label><input type="text" id="pay-txn" placeholder="UPI/TXN reference…"></div>
+        <div class="form-group"><label>Month</label><input type="text" id="pay-month" placeholder="e.g. June 2026"></div>
+        <div class="form-group full"><label>Remarks</label><textarea id="pay-remarks" placeholder="Optional notes…"></textarea></div>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="submitPayment()">Record Payment</button>
+      <button class="btn-secondary" onclick="closeModal('record-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+
+<script>
+const API_BASE = 'http://localhost:5000/api';
+
+
+
+function getToken() { return localStorage.getItem('hostelos_token'); }
+
+async function apiFetch(endpoint, options = {}) {
+  const res = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${getToken()}`,
+      ...(options.headers || {})
+    }
+  });
+  if (res.status === 401) { localStorage.clear(); window.location.href = 'admin-login.html'; return null; }
+  return res.json();
+}
+
+let searchTimer = null;
+function filterFees() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => loadFees(), 400);
+}
+
+async function loadFees() {
+  const status = document.getElementById('fee-status').value;
+  const monthFilter = document.getElementById('fee-month').value.toLowerCase().trim();
+  const search = document.getElementById('fee-search').value;
+
+  // Fetch all fees — filter month client side (partial match)
+  const query = new URLSearchParams({ status, search, limit: 200 }).toString();
+  const data = await apiFetch(`/fees?${query}`);
+  if (!data) return;
+
+  let fees = data.fees || [];
+
+  // Client side month filter — partial match
+  if (monthFilter) {
+    fees = fees.filter(f => f.month && f.month.toLowerCase().includes(monthFilter));
+  }
+
+  renderFees(fees);
+}
+
+/*async function loadSummary() {
+  const summary = await apiFetch('/fees/summary');
+  if (summary) {
+    document.getElementById('kpi-fees').textContent = summary.collectedFormatted || '₹0';
+  }
+}*/
+
+async function loadSummary() {
+  const summary = await apiFetch('/fees/summary');
+  if (summary) {
+    document.getElementById('kpi-fees').textContent    = summary.collectedFormatted || '₹0';
+    document.getElementById('kpi-total-records').textContent = (summary.paid + summary.due + summary.overdue) || 0;
+    document.getElementById('kpi-pending').textContent = '₹' + (summary.pending || 0).toLocaleString();
+  }
+}
+
+function renderFees(fees) {
+  const tbody = document.getElementById('fees-table');
+  if (!fees.length) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">💳</div><div class="empty-title">No records found</div></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = fees.map(f => {
+    const pc = f.status === 'Paid' ? 'pill-green' : f.status === 'Due' ? 'pill-yellow' : 'pill-red';
+    const studentName = f.studentId ? `${f.studentId.firstName} ${f.studentId.lastName}` : '—';
+    const studentId   = f.studentId ? f.studentId.studentId : '—';
+    const room        = f.studentId ? f.studentId.roomNumber : '—';
+    return `<tr>
+      <td class="td-name">${studentName}</td>
+      <td class="td-mono">${studentId}</td>
+      <td class="td-mono">${room}</td>
+      <td style="font-family:var(--sans);font-weight:700;color:var(--blue)">₹${f.amount.toLocaleString()}</td>
+      <td class="td-mono">${f.dueDate ? f.dueDate.slice(0,10) : '—'}</td>
+      <td class="td-mono">${f.paidDate ? f.paidDate.slice(0,10) : '—'}</td>
+      <td><span class="pill ${pc}">${f.status}</span></td>
+      <td style="display:flex;gap:6px;">
+        ${f.status !== 'Paid' ? `<button class="btn-sm blue" onclick="markPaid('${f._id}')">Mark Paid</button>` : ''}
+        ${f.status !== 'Paid' ? `<button class="btn-sm brown" onclick="sendReminder('${f._id}')">Remind</button>` : ''}
+        ${f.status === 'Paid' ? `<button class="btn-sm blue" onclick="printReceipt('${f._id}')">Receipt</button>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+//function filterFees() { loadFees(); }
+
+async function markPaid(id) {
+  const data = await apiFetch(`/fees/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ status: 'Paid', paidDate: new Date().toISOString().slice(0,10) })
+  });
+  if (!data) return;
+  showToast('Marked as paid', 'success');
+  loadFees();
+  loadSummary();
+}
+
+async function sendReminder(id) {
+  await apiFetch(`/fees/${id}/remind`, { method: 'POST' });
+  showToast('Reminder sent', 'success');
+}
+
+async function sendBulkReminder() {
+  await apiFetch('/fees/send-reminders', { method: 'POST', body: JSON.stringify({ filter: 'due_and_overdue' }) });
+  showToast('Reminders sent to all due/overdue students', 'success');
+}
+
+async function printReceipt(id) {
+  const data = await apiFetch(`/fees/${id}`);
+  if (!data || !data.fee) { showToast('Receipt not found', 'error'); return; }
+  const f = data.fee;
+  const studentName = f.studentId ? `${f.studentId.firstName} ${f.studentId.lastName}` : '—';
+
+  // Create modal instead of popup window
+  const existing = document.getElementById('receipt-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'receipt-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = `
+    <div style="background:white;border-radius:16px;padding:40px;max-width:480px;width:90%;max-height:90vh;overflow-y:auto;position:relative;">
+      <button onclick="document.getElementById('receipt-modal').remove()" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;">✕</button>
+      <div style="font-size:22px;font-weight:900;color:#1a2e5a;margin-bottom:4px;">🏢 HostelOS</div>
+      <div style="color:#6b7280;font-size:12px;margin-bottom:20px;">Payment Receipt</div>
+      <div style="font-size:28px;font-weight:900;color:#7a4f2d;margin:20px 0;">₹${f.amount?.toLocaleString()}</div>
+      <span style="background:#e6f9f0;color:#1a7a4a;padding:6px 16px;border-radius:100px;font-weight:700;font-size:13px;">✅ PAID</span>
+      <br><br>
+      <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eee;"><span style="color:#6b7280;font-size:13px;">Student Name</span><span style="font-weight:700;color:#1a2e5a;font-size:13px;">${studentName}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eee;"><span style="color:#6b7280;font-size:13px;">Month</span><span style="font-weight:700;color:#1a2e5a;font-size:13px;">${f.month}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eee;"><span style="color:#6b7280;font-size:13px;">Payment Mode</span><span style="font-weight:700;color:#1a2e5a;font-size:13px;">${f.paymentMode || '—'}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eee;"><span style="color:#6b7280;font-size:13px;">Transaction ID</span><span style="font-weight:700;color:#1a2e5a;font-size:13px;">${f.transactionId || '—'}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eee;"><span style="color:#6b7280;font-size:13px;">Paid On</span><span style="font-weight:700;color:#1a2e5a;font-size:13px;">${f.paidDate ? f.paidDate.slice(0,10) : '—'}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eee;"><span style="color:#6b7280;font-size:13px;">Due Date</span><span style="font-weight:700;color:#1a2e5a;font-size:13px;">${f.dueDate ? f.dueDate.slice(0,10) : '—'}</span></div>
+      <div style="margin-top:20px;font-size:11px;color:#9ca3af;text-align:center;">This is a system generated receipt — HostelOS</div>
+      <br>
+      <button onclick="window.print()" style="width:100%;background:#1a2e5a;color:white;border:none;padding:12px;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px;">🖨️ Print Receipt</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+async function loadRecordModal() {
+  const studentData = await apiFetch('/students?limit=100');
+  if (studentData && studentData.students) {
+    const select = document.getElementById('pay-student');
+    select.innerHTML = '<option value="">Select student…</option>';
+    studentData.students.forEach(s => {
+      const option = document.createElement('option');
+      option.value = s._id;
+      option.textContent = `${s.firstName} ${s.lastName} (${s.studentId})`;
+      select.appendChild(option);
+    });
+  }
+  openModal('record-modal');
+}
+
+async function submitPayment() {
+  const student = document.getElementById('pay-student').value;
+  const amount  = document.getElementById('pay-amount').value;
+  const mode    = document.getElementById('pay-mode').value;
+  const date    = document.getElementById('pay-date').value;
+  const txn     = document.getElementById('pay-txn').value;
+  const month   = document.getElementById('pay-month').value;
+
+  if (!student || !amount) { showToast('Fill required fields', 'error'); return; }
+
+  const data = await apiFetch('/fees/payment', {
+    method: 'POST',
+    body: JSON.stringify({ studentId: student, amount: Number(amount), paymentMode: mode, paidDate: date, transactionId: txn, month })
+  });
+  if (!data) return;
+  if (!data.success) { showToast(data.message, 'error'); return; }
+  closeModal('record-modal');
+  showToast('Payment recorded successfully', 'success');
+  loadFees();
+  loadSummary();
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast show ${type}`;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+document.addEventListener('DOMContentLoaded', () => { loadFees(); loadSummary(); });
+</script>
+</body></html>

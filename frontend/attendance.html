@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HostelOS — Attendance Tracking</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Open+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+.att-row td { padding:10px 16px; }
+.check-cell { display:flex; gap:8px; }
+.check-btn { width:32px; height:32px; border-radius:8px; border:2px solid var(--border); background:white; font-size:14px; cursor:pointer; transition:all 0.15s; display:flex;align-items:center;justify-content:center; }
+.check-btn.present { background:var(--green-bg); border-color:var(--green); }
+.check-btn.absent { background:var(--red-bg); border-color:var(--red); }
+.check-btn.leave { background:var(--yellow-bg); border-color:var(--yellow); }
+.date-nav { display:flex; align-items:center; gap:12px; }
+.date-nav button { width:30px;height:30px;border-radius:6px;border:1.5px solid var(--border);background:white;cursor:pointer;font-size:14px;transition:all 0.15s;display:flex;align-items:center;justify-content:center; }
+.date-nav button:hover { border-color:var(--blue);background:var(--blue-light); }
+.date-display { font-family:var(--sans);font-size:14px;font-weight:700;color:var(--blue); }
+.att-legend { display:flex;gap:16px;align-items:center;padding:14px 20px;border-bottom:1px solid var(--border);background:var(--bg2); }
+.legend-item { display:flex;align-items:center;gap:6px;font-family:var(--body);font-size:11px;color:var(--muted); }
+.legend-dot { width:10px;height:10px;border-radius:3px; }
+</style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-logo"><div class="logo-mark">H</div><span>HostelOS</span></div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Main</div>
+    <a class="nav-item" href="index.html"><span class="ni">📊</span> Dashboard</a>
+    <a class="nav-item" href="students.html"><span class="ni">👥</span> Students</a>
+    <a class="nav-item" href="rooms.html"><span class="ni">🏠</span> Rooms</a>
+    <a class="nav-item" href="fees.html"><span class="ni">💳</span> Fees</a>
+    <div class="nav-section-label">Manage</div>
+    <a class="nav-item" href="complaints.html"><span class="ni">📋</span> Complaints <span class="nav-badge">3</span></a>
+    <a class="nav-item active" href="attendance.html"><span class="ni">📅</span> Attendance</a>
+    <a class="nav-item" href="notifications.html"><span class="ni">🔔</span> Notifications</a>
+  </nav>
+  <div class="sidebar-footer"><div class="sidebar-user"><div class="user-avatar">AD</div><div><div class="user-name">Admin User</div><div class="user-role">Super Administrator</div></div></div></div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="page-title">Attendance</div>
+      <div class="breadcrumb">— Daily Tracking</div>
+    </div>
+    <div class="topbar-right">
+      <button class="topbar-btn secondary" onclick="markAllPresent()">✅ Mark All Present</button>
+      <button class="topbar-btn" onclick="saveAttendance()">💾 Save Attendance</button>
+    </div>
+  </div>
+
+  <div class="page-content">
+    <!-- API: GET /api/attendance/summary?date= -->
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-top"><span class="kpi-label">Present Today</span><span class="kpi-icon">✅</span></div><div class="kpi-val green" id="kpi-present">312</div><div class="kpi-sub up">91.2% attendance</div></div>
+      <div class="kpi"><div class="kpi-top"><span class="kpi-label">Absent</span><span class="kpi-icon">❌</span></div><div class="kpi-val red" id="kpi-absent">18</div><div class="kpi-sub down">Alerts sent</div></div>
+      <div class="kpi"><div class="kpi-top"><span class="kpi-label">On Leave</span><span class="kpi-icon">🏖️</span></div><div class="kpi-val brown" id="kpi-leave">12</div><div class="kpi-sub">Approved leaves</div></div>
+      <div class="kpi"><div class="kpi-top"><span class="kpi-label">Not Marked</span><span class="kpi-icon">⏳</span></div><div class="kpi-val" id="kpi-unmarked">0</div><div class="kpi-sub">Pending</div></div>
+    </div>
+
+    <!-- Attendance Table: API: GET /api/attendance?date=YYYY-MM-DD&block= -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Daily Attendance Register</span>
+        <div class="date-nav">
+          <button onclick="changeDate(-1)">‹</button>
+          <span class="date-display" id="date-display">30 May 2026</span>
+          <button onclick="changeDate(1)">›</button>
+          <input type="date" id="date-picker" style="font-family:var(--sans);font-size:12px;padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;outline:none;" onchange="loadAttendance(this.value)" value="2026-05-30">
+        </div>
+      </div>
+      <div class="att-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--green-bg);border:1.5px solid var(--green)"></div>Present</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--red-bg);border:1.5px solid var(--red)"></div>Absent</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--yellow-bg);border:1.5px solid var(--yellow)"></div>On Leave</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--bg3);border:1.5px solid var(--border)"></div>Not Marked</div>
+        <select class="filter-select" id="att-block" onchange="filterAttendance()" style="margin-left:auto">
+          <option value="">All Blocks</option><option value="A">Block A</option><option value="B">Block B</option><option value="C">Block C</option><option value="D">Block D</option>
+        </select>
+        <input class="search-input" type="text" id="att-search" placeholder="Search…" oninput="filterAttendance()" style="flex:0;width:160px;">
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Student</th><th>ID</th><th>Room</th><th>Check-In</th><th>Check-Out</th><th>Status</th><th>Mark</th></tr></thead>
+          <tbody id="attendance-table"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+
+<script>
+
+
+
+const API_BASE = 'http://localhost:5000/api';
+function getToken() { return localStorage.getItem('hostelos_token'); }
+
+async function apiFetch(endpoint, options = {}) {
+  const res = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}`, ...(options.headers || {}) }
+  });
+  if (res.status === 401) { localStorage.clear(); window.location.href = 'admin-login.html'; return null; }
+  return res.json();
+}
+
+let attendanceRecords = [];
+let currentDate = new Date().toISOString().slice(0, 10);
+
+async function loadAttendance(date) {
+  if (date) currentDate = date;
+  document.getElementById('date-display').textContent = new Date(currentDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+  const block = document.getElementById('att-block').value;
+  const query = new URLSearchParams({ date: currentDate, block }).toString();
+  const data = await apiFetch(`/attendance?${query}`);
+  if (!data) return;
+
+  attendanceRecords = data.records || [];
+  renderTable(attendanceRecords);
+  updateKPIs();
+}
+
+function renderTable(records) {
+  const tbody = document.getElementById('attendance-table');
+  if (!records.length) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">📅</div><div class="empty-title">No records for this date</div></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = records.map(r => {
+    const name = r.studentId ? `${r.studentId.firstName} ${r.studentId.lastName}` : '—';
+    const sid  = r.studentId ? r.studentId.studentId : '—';
+    const room = r.studentId ? r.studentId.roomNumber : '—';
+    const sc   = r.status === 'present' ? 'pill-green' : r.status === 'absent' ? 'pill-red' : 'pill-yellow';
+    return `<tr>
+      <td class="td-name">${name}</td>
+      <td class="td-mono">${sid}</td>
+      <td class="td-mono">${room}</td>
+      <td class="td-mono">${r.checkIn || '—'}</td>
+      <td class="td-mono">${r.checkOut || '—'}</td>
+      <td><span class="pill ${sc}">${r.status.charAt(0).toUpperCase() + r.status.slice(1)}</span></td>
+      <td>
+        <div class="check-cell">
+          <button class="check-btn ${r.status === 'present' ? 'present' : ''}" onclick="setStatus('${r._id}','present')">✓</button>
+          <button class="check-btn ${r.status === 'absent' ? 'absent' : ''}" onclick="setStatus('${r._id}','absent')">✗</button>
+          <button class="check-btn ${r.status === 'leave' ? 'leave' : ''}" onclick="setStatus('${r._id}','leave')">🏖</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function setStatus(id, status) {
+  const data = await apiFetch(`/attendance/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ status })
+  });
+  if (!data) return;
+  const rec = attendanceRecords.find(r => r._id === id);
+  if (rec) rec.status = status;
+  renderTable(attendanceRecords);
+  updateKPIs();
+}
+
+function updateKPIs() {
+  document.getElementById('kpi-present').textContent  = attendanceRecords.filter(r => r.status === 'present').length;
+  document.getElementById('kpi-absent').textContent   = attendanceRecords.filter(r => r.status === 'absent').length;
+  document.getElementById('kpi-leave').textContent    = attendanceRecords.filter(r => r.status === 'leave').length;
+  document.getElementById('kpi-unmarked').textContent = attendanceRecords.filter(r => !r.status).length;
+}
+
+function filterAttendance() { loadAttendance(currentDate); }
+
+function changeDate(delta) {
+  const d = new Date(currentDate);
+  d.setDate(d.getDate() + delta);
+  currentDate = d.toISOString().slice(0, 10);
+  document.getElementById('date-picker').value = currentDate;
+  loadAttendance(currentDate);
+}
+
+async function markAllPresent() {
+  await apiFetch('/attendance/mark-all', {
+    method: 'POST',
+    body: JSON.stringify({ date: currentDate, status: 'present' })
+  });
+  attendanceRecords.forEach(r => r.status = 'present');
+  renderTable(attendanceRecords);
+  updateKPIs();
+  showToast('All students marked present', 'success');
+}
+
+async function saveAttendance() {
+  await apiFetch('/attendance/bulk-save', {
+    method: 'POST',
+    body: JSON.stringify({
+      date: currentDate,
+      records: attendanceRecords.map(r => ({
+        studentId: r.studentId._id,
+        status: r.status,
+        checkIn: r.checkIn,
+        checkOut: r.checkOut
+      }))
+    })
+  });
+  showToast('Attendance saved successfully', 'success');
+}
+
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast show ${type}`;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+document.addEventListener('DOMContentLoaded', () => loadAttendance(currentDate));
+</script>
+</body></html>

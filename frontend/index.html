@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HostelOS — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Open+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+.activity-feed { display: flex; flex-direction: column; gap: 0; }
+.act-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.act-item:last-child { border-bottom: none; }
+.act-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
+.act-text { font-family: var(--body); font-size: 12px; color: var(--muted); line-height: 1.5; }
+.act-text strong { color: var(--blue); font-weight: 600; }
+.act-time { font-size: 10px; color: var(--muted2); margin-top: 2px; font-family: var(--sans); font-weight: 500; }
+.room-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.rbl { font-family: var(--body); font-size: 12px; color: var(--muted); width: 52px; }
+.rb-bg { flex: 1; height: 8px; background: var(--bg3); border-radius: 4px; overflow: hidden; }
+.rb-fill { height: 100%; border-radius: 4px; transition: width 1s ease; }
+.rb-pct { font-family: var(--sans); font-size: 11px; font-weight: 700; width: 34px; text-align: right; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+.three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-top: 16px; }
+.quick-link {
+  background: white; border: 1px solid var(--border); border-radius: 12px;
+  padding: 20px; text-decoration: none; color: var(--text);
+  display: flex; align-items: center; gap: 14px;
+  transition: all 0.2s; cursor: pointer;
+}
+.quick-link:hover { border-color: var(--blue); box-shadow: var(--shadow); transform: translateY(-2px); }
+.ql-icon { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.ql-title { font-family: var(--sans); font-size: 13px; font-weight: 700; color: var(--blue); }
+.ql-sub { font-family: var(--body); font-size: 11px; color: var(--muted); margin-top: 2px; }
+@media(max-width:700px) { .two-col,.three-col { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-mark">H</div>
+    <span>HostelOS</span>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Main</div>
+    <a class="nav-item active" href="index.html"><span class="ni">📊</span> Dashboard</a>
+    <a class="nav-item" href="students.html"><span class="ni">👥</span> Students</a>
+    <a class="nav-item" href="rooms.html"><span class="ni">🏠</span> Rooms</a>
+    <a class="nav-item" href="fees.html"><span class="ni">💳</span> Fees</a>
+    <div class="nav-section-label">Manage</div>
+    <a class="nav-item" href="complaints.html"><span class="ni">📋</span> Complaints <span class="nav-badge">3</span></a>
+    <a class="nav-item" href="attendance.html"><span class="ni">📅</span> Attendance</a>
+    <a class="nav-item" href="notifications.html"><span class="ni">🔔</span> Notifications</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="user-avatar">AD</div>
+      <div>
+        <div class="user-name">Admin User</div>
+        <div class="user-role">Super Administrator</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="page-title">Dashboard</div>
+      <div class="breadcrumb">— Overview</div>
+    </div>
+    <div class="topbar-right">
+      <div class="notif-bell" onclick="window.location='notifications.html'">🔔<div class="notif-dot"></div></div>
+      <button class="topbar-btn" onclick="window.location='students.html'">+ Add Student</button>
+    </div>
+  </div>
+
+  <div class="page-content">
+    <!-- KPIs -->
+    <!-- API: GET /api/dashboard/summary -->
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="kpi-top"><span class="kpi-label">Total Students</span><span class="kpi-icon">👤</span></div>
+        <div class="kpi-val" id="kpi-students">342</div>
+        <div class="kpi-sub up">↑ 12 registered this month</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-top"><span class="kpi-label">Rooms Occupied</span><span class="kpi-icon">🏠</span></div>
+        <div class="kpi-val" id="kpi-rooms">178<span style="font-size:16px;color:var(--muted2)">/240</span></div>
+        <div class="kpi-sub">74.2% capacity utilised</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-top"><span class="kpi-label">Fees Collected</span><span class="kpi-icon">💰</span></div>
+        <div class="kpi-val brown" id="kpi-fees">₹4.8L</div>
+        <div class="kpi-sub up">↑ 8% vs last month</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-top"><span class="kpi-label">Open Complaints</span><span class="kpi-icon">📋</span></div>
+        <div class="kpi-val red" id="kpi-complaints">14</div>
+        <div class="kpi-sub down">3 marked urgent</div>
+      </div>
+    </div>
+
+    <!-- Row 1 -->
+    <div class="two-col">
+      <!-- Recent Students -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Recent Registrations</span>
+          <a href="students.html" style="font-family:var(--sans);font-size:11px;font-weight:700;color:var(--brown);text-decoration:none;">View all →</a>
+        </div>
+        <!-- API: GET /api/students?limit=5&sort=created_at:desc -->
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Name</th><th>Room</th><th>Status</th><th>Fees</th></tr></thead>
+            <tbody id="recent-students">
+              <tr><td class="td-name">Arjun Mehra</td><td class="td-mono">A-204</td><td><span class="pill pill-green">Active</span></td><td><span class="pill pill-green">Paid</span></td></tr>
+              <tr><td class="td-name">Priya Sharma</td><td class="td-mono">B-112</td><td><span class="pill pill-green">Active</span></td><td><span class="pill pill-yellow">Due</span></td></tr>
+              <tr><td class="td-name">Ravi Kulkarni</td><td class="td-mono">C-308</td><td><span class="pill pill-green">Active</span></td><td><span class="pill pill-green">Paid</span></td></tr>
+              <tr><td class="td-name">Sneha Iyer</td><td class="td-mono">A-106</td><td><span class="pill pill-red">Inactive</span></td><td><span class="pill pill-red">Overdue</span></td></tr>
+              <tr><td class="td-name">Manav Tiwari</td><td class="td-mono">D-201</td><td><span class="pill pill-yellow">Pending</span></td><td><span class="pill pill-yellow">Due</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Activity Feed -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Live Activity Feed</span>
+          <span style="font-family:var(--sans);font-size:10px;color:var(--muted2);">AUTO REFRESH</span>
+        </div>
+        <!-- API: GET /api/activity?limit=6 -->
+        <div class="card-body">
+          <div class="activity-feed" id="activity-feed">
+            <div class="act-item"><div class="act-dot" style="background:var(--blue)"></div><div><div class="act-text"><strong>Room B-204</strong> allocated to Karan Singh</div><div class="act-time">2 min ago</div></div></div>
+            <div class="act-item"><div class="act-dot" style="background:var(--brown)"></div><div><div class="act-text"><strong>Fee reminder</strong> sent to 18 students</div><div class="act-time">15 min ago</div></div></div>
+            <div class="act-item"><div class="act-dot" style="background:var(--red)"></div><div><div class="act-text"><strong>Complaint #47</strong> — Water leakage in C-block raised</div><div class="act-time">1 hr ago</div></div></div>
+            <div class="act-item"><div class="act-dot" style="background:var(--green)"></div><div><div class="act-text"><strong>Attendance marked</strong> for 312/342 students</div><div class="act-time">3 hrs ago</div></div></div>
+            <div class="act-item"><div class="act-dot" style="background:var(--blue)"></div><div><div class="act-text"><strong>New student</strong> Anjali Rao registered</div><div class="act-time">5 hrs ago</div></div></div>
+            <div class="act-item"><div class="act-dot" style="background:var(--brown)"></div><div><div class="act-text"><strong>Fee payment</strong> ₹12,000 received from Rohit Das</div><div class="act-time">Yesterday</div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 2 -->
+    <div class="two-col">
+      <!-- Block Occupancy -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Block Occupancy</span>
+          <a href="rooms.html" style="font-family:var(--sans);font-size:11px;font-weight:700;color:var(--brown);text-decoration:none;">Manage →</a>
+        </div>
+        <!-- API: GET /api/rooms/occupancy-by-block -->
+        <div class="card-body" id="block-occupancy">
+          <div class="room-bar-row"><span class="rbl">Block A</span><div class="rb-bg"><div class="rb-fill" style="width:88%;background:var(--blue)"></div></div><span class="rb-pct" style="color:var(--blue)">88%</span></div>
+          <div class="room-bar-row"><span class="rbl">Block B</span><div class="rb-bg"><div class="rb-fill" style="width:72%;background:var(--brown)"></div></div><span class="rb-pct" style="color:var(--brown)">72%</span></div>
+          <div class="room-bar-row"><span class="rbl">Block C</span><div class="rb-bg"><div class="rb-fill" style="width:55%;background:var(--blue-mid)"></div></div><span class="rb-pct" style="color:var(--blue-mid)">55%</span></div>
+          <div class="room-bar-row"><span class="rbl">Block D</span><div class="rb-bg"><div class="rb-fill" style="width:40%;background:var(--brown-mid)"></div></div><span class="rb-pct" style="color:var(--brown-mid)">40%</span></div>
+        </div>
+      </div>
+
+      <!-- Fee Overview -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Fee Collection Overview</span>
+          <a href="fees.html" style="font-family:var(--sans);font-size:11px;font-weight:700;color:var(--brown);text-decoration:none;">Details →</a>
+        </div>
+        <!-- API: GET /api/fees/summary -->
+        <div class="card-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+            <div style="text-align:center;padding:14px;background:var(--green-bg);border-radius:10px;">
+              <div style="font-family:var(--sans);font-size:20px;font-weight:900;color:var(--green)">268</div>
+              <div style="font-family:var(--body);font-size:11px;color:var(--green);margin-top:4px;">Paid</div>
+            </div>
+            <div style="text-align:center;padding:14px;background:var(--yellow-bg);border-radius:10px;">
+              <div style="font-family:var(--sans);font-size:20px;font-weight:900;color:var(--yellow)">52</div>
+              <div style="font-family:var(--body);font-size:11px;color:var(--yellow);margin-top:4px;">Due</div>
+            </div>
+            <div style="text-align:center;padding:14px;background:var(--red-bg);border-radius:10px;">
+              <div style="font-family:var(--sans);font-size:20px;font-weight:900;color:var(--red)">22</div>
+              <div style="font-family:var(--body);font-size:11px;color:var(--red);margin-top:4px;">Overdue</div>
+            </div>
+          </div>
+          <div style="margin-top:16px;padding:14px;background:var(--bg2);border-radius:10px;border:1px solid var(--border);">
+            <div style="font-family:var(--body);font-size:11px;color:var(--muted);margin-bottom:4px;">Total Pending Recovery</div>
+            <div style="font-family:var(--sans);font-size:22px;font-weight:900;color:var(--brown);">₹1,24,000</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Links -->
+    <div style="margin-top:16px;">
+      <div style="font-family:var(--sans);font-size:11px;font-weight:700;color:var(--muted2);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px;">Quick Actions</div>
+      <div class="three-col">
+        <a class="quick-link" href="rooms.html"><div class="ql-icon" style="background:var(--blue-light)">🏠</div><div><div class="ql-title">Allocate Room</div><div class="ql-sub">Assign rooms to students</div></div></a>
+        <a class="quick-link" href="fees.html"><div class="ql-icon" style="background:var(--brown-light)">💳</div><div><div class="ql-title">Record Payment</div><div class="ql-sub">Mark fees as paid</div></div></a>
+        <a class="quick-link" href="complaints.html"><div class="ql-icon" style="background:var(--red-bg)">📋</div><div><div class="ql-title">View Complaints</div><div class="ql-sub">3 urgent unresolved</div></div></a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+
+
+<script>
+
+
+
+const API_BASE = 'http://localhost:5000/api';
+
+function getToken() {
+  return localStorage.getItem('hostelos_token');
+}
+
+async function apiFetch(endpoint, options = {}) {
+  const res = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${getToken()}`,
+      ...(options.headers || {})
+    }
+  });
+  if (res.status === 401) {
+    localStorage.clear();
+    window.location.href = 'admin-login.html';
+    return null;
+  }
+  return res.json();
+}
+
+async function loadDashboard() {
+  // Load student summary
+  const studentData = await apiFetch('/students/summary');
+  if (studentData) {
+    document.getElementById('kpi-students').textContent = studentData.total;
+  }
+
+  // Load recent students
+  const recentData = await apiFetch('/students?limit=5&sort=createdAt:desc');
+  if (recentData && recentData.students) {
+    const tbody = document.getElementById('recent-students');
+    tbody.innerHTML = recentData.students.map(s => {
+      const feePill = s.feeStatus === 'Paid' ? 'pill-green' : s.feeStatus === 'Overdue' ? 'pill-red' : 'pill-yellow';
+      const statusPill = s.status === 'Active' ? 'pill-green' : s.status === 'Pending' ? 'pill-yellow' : 'pill-red';
+      return `<tr>
+        <td class="td-name">${s.firstName} ${s.lastName}</td>
+        <td class="td-mono">${s.roomNumber || 'Unassigned'}</td>
+        <td><span class="pill ${statusPill}">${s.status}</span></td>
+        <td><span class="pill ${feePill}">${s.feeStatus || 'Due'}</span></td>
+      </tr>`;
+    }).join('');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadDashboard);
+</script>
+</body></html>

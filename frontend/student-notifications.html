@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HostelOS — My Notifications</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Open+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="student-shared.css">
+<style>
+.notif-card {
+  background:white; border:1px solid var(--border); border-radius:12px;
+  padding:18px; margin-bottom:10px; border-left:4px solid var(--border);
+  transition:all 0.2s; display:flex; gap:14px; align-items:flex-start;
+}
+.notif-card.unread { border-left-color:var(--brown); background:var(--brown-light); }
+.notif-card.info    { border-left-color:var(--blue); }
+.notif-card.warning { border-left-color:var(--yellow); }
+.notif-card.alert   { border-left-color:var(--red); }
+.notif-card.success { border-left-color:var(--green); }
+.notif-icon {
+  width:40px; height:40px; border-radius:10px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:18px; flex-shrink:0;
+}
+.notif-body { flex:1; }
+.notif-title {
+  font-family:var(--sans); font-size:14px; font-weight:700;
+  color:var(--blue); margin-bottom:4px;
+}
+.notif-title .unread-dot {
+  display:inline-block; width:8px; height:8px;
+  background:var(--brown); border-radius:50%; margin-right:6px;
+}
+.notif-text {
+  font-family:var(--body); font-size:13px; color:var(--muted);
+  line-height:1.6; margin-bottom:8px;
+}
+.notif-footer {
+  display:flex; justify-content:space-between; align-items:center;
+}
+.notif-time {
+  font-family:var(--sans); font-size:10px; font-weight:600;
+  color:var(--muted2); letter-spacing:0.04em;
+}
+.notif-tag {
+  font-family:var(--sans); font-size:10px; font-weight:700;
+  padding:3px 10px; border-radius:100px;
+}
+.mark-read-btn {
+  font-family:var(--sans); font-size:11px; font-weight:700;
+  background:white; color:var(--brown);
+  border:1.5px solid var(--brown-light); border-radius:6px;
+  padding:4px 12px; cursor:pointer; transition:all 0.15s; flex-shrink:0;
+}
+.mark-read-btn:hover { background:var(--brown); color:white; }
+.filter-tabs {
+  display:flex; gap:8px; padding:16px 20px;
+  border-bottom:1px solid var(--border); flex-wrap:wrap;
+}
+.filter-tab {
+  font-family:var(--sans); font-size:12px; font-weight:700;
+  padding:7px 16px; border-radius:8px; cursor:pointer;
+  border:1.5px solid var(--border); background:white; color:var(--muted);
+  transition:all 0.15s;
+}
+.filter-tab.active, .filter-tab:hover {
+  background:var(--brown); color:white; border-color:var(--brown);
+}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-mark">H</div>
+    <span>HostelOS</span>
+    <span class="sidebar-badge">STUDENT</span>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">My Portal</div>
+    <a class="nav-item" href="student-dashboard.html"><span class="ni">🏠</span> Dashboard</a>
+    <a class="nav-item" href="student-fees.html"><span class="ni">💳</span> My Fees</a>
+    <a class="nav-item" href="student-complaints.html"><span class="ni">📋</span> My Complaints</a>
+    <a class="nav-item active" href="student-notifications.html"><span class="ni">🔔</span> Notifications</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="user-avatar" id="user-initials">ST</div>
+      <div>
+        <div class="user-name" id="user-name">Student</div>
+        <div class="user-role" id="user-room">Room: —</div>
+      </div>
+    </div>
+    <button class="logout-btn" onclick="logout()">← Logout</button>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="page-title">Notifications</div>
+      <div class="breadcrumb">— Announcements & Alerts</div>
+    </div>
+    <div class="topbar-right">
+      <button class="topbar-btn secondary" onclick="markAllRead()">✓ Mark All Read</button>
+    </div>
+  </div>
+
+  <div class="page-content">
+
+    <!-- KPIs: API GET /api/notifications -->
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="kpi-top"><span class="kpi-label">Total</span><span class="kpi-icon">🔔</span></div>
+        <div class="kpi-val" id="kpi-total">0</div>
+        <div class="kpi-sub">All notifications</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-top"><span class="kpi-label">Unread</span><span class="kpi-icon">🔵</span></div>
+        <div class="kpi-val brown" id="kpi-unread">0</div>
+        <div class="kpi-sub">New messages</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-top"><span class="kpi-label">Alerts</span><span class="kpi-icon">⚠️</span></div>
+        <div class="kpi-val red" id="kpi-alerts">0</div>
+        <div class="kpi-sub">Urgent notices</div>
+      </div>
+    </div>
+
+    <!-- Notifications List -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">All Notifications</span>
+        <span style="font-family:var(--body);font-size:11px;color:var(--muted2);" id="last-updated"></span>
+      </div>
+
+      <!-- Filter Tabs -->
+      <div class="filter-tabs">
+        <button class="filter-tab active" onclick="filterByType('',this)">All</button>
+        <button class="filter-tab" onclick="filterByType('unread',this)">Unread</button>
+        <button class="filter-tab" onclick="filterByType('info',this)">Info</button>
+        <button class="filter-tab" onclick="filterByType('warning',this)">Warning</button>
+        <button class="filter-tab" onclick="filterByType('alert',this)">Alert</button>
+        <button class="filter-tab" onclick="filterByType('success',this)">Success</button>
+      </div>
+
+      <div style="padding:16px 20px;" id="notif-list">
+        <div class="empty-state">
+          <div class="empty-icon">🔔</div>
+          <div class="empty-title">No notifications yet</div>
+          <div class="empty-sub">Announcements from the hostel admin will appear here</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Auth Guard ─────────────────────────────────────────
+const userType = localStorage.getItem('hostelos_type');
+const token    = localStorage.getItem('hostelos_token');
+if (!token || userType !== 'student') window.location.href = 'student-login.html';
+
+const API_BASE = 'http://localhost:5000/api';
+function getToken() { return localStorage.getItem('hostelos_token'); }
+
+async function apiFetch(endpoint, options = {}) {
+  const res = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${getToken()}`,
+      ...(options.headers || {})
+    }
+  });
+  if (res.status === 401) {
+    localStorage.clear();
+    window.location.href = 'student-login.html';
+    return null;
+  }
+  return res.json();
+}
+
+function logout() { localStorage.clear(); window.location.href = 'student-login.html'; }
+
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast show ${type}`;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+let allNotifs = [];
+
+// ── Load user info ─────────────────────────────────────
+async function loadUserInfo() {
+  const me = await apiFetch('/auth/me');
+  if (!me || !me.user) return;
+  const s = me.user;
+  document.getElementById('user-initials').textContent = `${s.firstName[0]}${s.lastName[0]}`;
+  document.getElementById('user-name').textContent     = `${s.firstName} ${s.lastName}`;
+  document.getElementById('user-room').textContent     = `Room: ${s.roomNumber || '—'}`;
+}
+
+// ── Load notifications ─────────────────────────────────
+// API: GET /api/notifications
+async function loadNotifications() {
+  const data = await apiFetch('/notifications');
+  if (!data) return;
+
+  allNotifs = data.notifications || [];
+
+  // Get current user id from localStorage
+  const user = JSON.parse(localStorage.getItem('hostelos_user') || '{}');
+
+  // Mark unread — notifications where user._id not in readBy
+  allNotifs = allNotifs.map(n => ({
+    ...n,
+    isUnread: !( n.readBy || [] ).includes(user._id)
+  }));
+
+  updateKPIs();
+  renderNotifs(allNotifs);
+
+  document.getElementById('last-updated').textContent =
+    'Updated ' + new Date().toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
+}
+
+function updateKPIs() {
+  const unread = allNotifs.filter(n => n.isUnread).length;
+  const alerts = allNotifs.filter(n => n.type === 'alert' || n.type === 'warning').length;
+  document.getElementById('kpi-total').textContent  = allNotifs.length;
+  document.getElementById('kpi-unread').textContent = unread;
+  document.getElementById('kpi-alerts').textContent = alerts;
+}
+
+function renderNotifs(notifs) {
+  const container = document.getElementById('notif-list');
+
+  if (!notifs.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🔔</div>
+        <div class="empty-title">No notifications found</div>
+        <div class="empty-sub">Announcements from the hostel admin will appear here</div>
+      </div>`;
+    return;
+  }
+
+  const iconMap = { info:'ℹ️', warning:'⚠️', alert:'🚨', success:'✅' };
+  const bgMap   = {
+    info:    'background:var(--blue-light)',
+    warning: 'background:var(--yellow-bg)',
+    alert:   'background:var(--red-bg)',
+    success: 'background:var(--green-bg)'
+  };
+  const pillMap = {
+    info:    'pill-blue',
+    warning: 'pill-yellow',
+    alert:   'pill-red',
+    success: 'pill-green'
+  };
+
+  container.innerHTML = notifs.map(n => `
+    <div class="notif-card ${n.type} ${n.isUnread ? 'unread' : ''}" id="notif-${n._id}">
+      <div class="notif-icon" style="${bgMap[n.type] || 'background:var(--bg2)'}">
+        ${iconMap[n.type] || '🔔'}
+      </div>
+      <div class="notif-body">
+        <div class="notif-title">
+          ${n.isUnread ? '<span class="unread-dot"></span>' : ''}
+          ${n.title}
+        </div>
+        <div class="notif-text">${n.message}</div>
+        <div class="notif-footer">
+          <span class="notif-time">${getTimeAgo(n.createdAt)}</span>
+          <span class="pill ${pillMap[n.type] || 'pill-blue'}">${n.type?.toUpperCase() || 'INFO'}</span>
+        </div>
+      </div>
+      ${n.isUnread ? `<button class="mark-read-btn" onclick="markRead('${n._id}')">Mark Read</button>` : ''}
+    </div>
+  `).join('');
+}
+
+// ── Filter by type ─────────────────────────────────────
+function filterByType(type, el) {
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+
+  let filtered;
+  if (type === 'unread') {
+    filtered = allNotifs.filter(n => n.isUnread);
+  } else if (type === '') {
+    filtered = allNotifs;
+  } else {
+    filtered = allNotifs.filter(n => n.type === type);
+  }
+  renderNotifs(filtered);
+}
+
+// ── Mark single notification as read ──────────────────
+// API: PUT /api/notifications/:id/read
+async function markRead(id) {
+  const data = await apiFetch(`/notifications/${id}/read`, { method: 'PUT' });
+  if (!data) return;
+
+  const notif = allNotifs.find(n => n._id === id);
+  if (notif) notif.isUnread = false;
+
+  // Update UI directly without re-fetching
+  const el = document.getElementById(`notif-${id}`);
+  if (el) {
+    el.classList.remove('unread');
+    const dot = el.querySelector('.unread-dot');
+    if (dot) dot.remove();
+    const btn = el.querySelector('.mark-read-btn');
+    if (btn) btn.remove();
+  }
+
+  updateKPIs();
+}
+
+// ── Mark all as read ───────────────────────────────────
+// API: POST /api/notifications/mark-all-read
+async function markAllRead() {
+  const data = await apiFetch('/notifications/mark-all-read', { method: 'POST' });
+  if (!data) return;
+
+  allNotifs.forEach(n => n.isUnread = false);
+  renderNotifs(allNotifs);
+  updateKPIs();
+  showToast('All notifications marked as read', 'success');
+}
+
+// ── Time ago helper ────────────────────────────────────
+function getTimeAgo(dateStr) {
+  if (!dateStr) return '—';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1)  return 'Just now';
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24)  return `${hrs} hr${hrs > 1 ? 's' : ''} ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7)  return `${days} day${days > 1 ? 's' : ''} ago`;
+  return new Date(dateStr).toLocaleDateString('en-IN');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadUserInfo();
+  loadNotifications();
+});
+</script>
+</body>
+</html>

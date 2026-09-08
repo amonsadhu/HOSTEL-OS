@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HostelOS — Student Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Open+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="student-shared.css">
+<style>
+.info-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px; }
+.info-card { background:white; border:1px solid var(--border); border-radius:12px; padding:24px; }
+.info-card-title { font-family:var(--sans); font-size:11px; font-weight:700; color:var(--muted2); letter-spacing:0.1em; text-transform:uppercase; margin-bottom:16px; }
+.info-row { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); }
+.info-row:last-child { border-bottom:none; }
+.info-label { font-family:var(--body); font-size:12px; color:var(--muted); }
+.info-value { font-family:var(--sans); font-size:13px; font-weight:700; color:var(--blue); }
+.welcome-banner {
+  background:var(--brown); border-radius:12px; padding:24px 28px;
+  margin-bottom:24px; display:flex; align-items:center; justify-content:space-between;
+}
+.wb-title { font-family:var(--sans); font-size:22px; font-weight:900; color:white; letter-spacing:-0.5px; margin-bottom:4px; }
+.wb-sub { font-family:var(--body); font-size:13px; color:rgba(255,255,255,0.65); }
+.wb-icon { font-size:48px; }
+.quick-links { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:24px; }
+.ql { background:white; border:1px solid var(--border); border-radius:12px; padding:20px; text-decoration:none; color:var(--text); display:flex; flex-direction:column; align-items:center; gap:10px; transition:all 0.2s; text-align:center; cursor:pointer; }
+.ql:hover { border-color:var(--brown); box-shadow:var(--shadow); transform:translateY(-2px); }
+.ql-icon { font-size:28px; }
+.ql-title { font-family:var(--sans); font-size:13px; font-weight:700; color:var(--blue); }
+.ql-sub { font-family:var(--body); font-size:11px; color:var(--muted); }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-mark">H</div>
+    <span>HostelOS</span>
+    <span class="sidebar-badge">STUDENT</span>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">My Portal</div>
+    <a class="nav-item active" href="student-dashboard.html"><span class="ni">🏠</span> Dashboard</a>
+    <a class="nav-item" href="student-fees.html"><span class="ni">💳</span> My Fees</a>
+    <a class="nav-item" href="student-complaints.html"><span class="ni">📋</span> My Complaints</a>
+    <a class="nav-item" href="student-notifications.html"><span class="ni">🔔</span> Notifications</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="user-avatar" id="user-initials">ST</div>
+      <div>
+        <div class="user-name" id="user-name">Student</div>
+        <div class="user-role" id="user-room">Room: —</div>
+      </div>
+    </div>
+    <button class="logout-btn" onclick="logout()">← Logout</button>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="page-title">My Dashboard</div>
+      <div class="breadcrumb">— Overview</div>
+    </div>
+    <div class="topbar-right">
+      <button class="topbar-btn" onclick="window.location.href='student-fees.html'">💳 Pay Fees</button>
+    </div>
+  </div>
+
+  <div class="page-content">
+
+    <!-- Welcome Banner -->
+    <div class="welcome-banner">
+      <div>
+        <div class="wb-title" id="welcome-title">Welcome back!</div>
+        <div class="wb-sub" id="welcome-sub">Here's a summary of your hostel status.</div>
+      </div>
+      <div class="wb-icon">🎓</div>
+    </div>
+
+    <!-- KPIs -->
+    <!-- API: GET /api/students/:id + /api/fees?studentId=:id -->
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="kpi-top"><span class="kpi-label">My Room</span><span class="kpi-icon">🏠</span></div>
+        <div class="kpi-val brown" id="kpi-room">—</div>
+        <div class="kpi-sub" id="kpi-block">Block —</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-top"><span class="kpi-label">Fee Status</span><span class="kpi-icon">💳</span></div>
+        <div class="kpi-val" id="kpi-fee-status">—</div>
+        <div class="kpi-sub" id="kpi-fee-sub">This month</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-top"><span class="kpi-label">My Complaints</span><span class="kpi-icon">📋</span></div>
+        <div class="kpi-val" id="kpi-complaints">—</div>
+        <div class="kpi-sub" id="kpi-complaints-sub">Total raised</div>
+      </div>
+    </div>
+
+    <!-- Info Grid -->
+    <div class="info-grid">
+      <!-- Personal Info -->
+      <div class="info-card">
+        <div class="info-card-title">My Details</div>
+        <div class="info-row"><span class="info-label">Student ID</span><span class="info-value" id="d-sid">—</span></div>
+        <div class="info-row"><span class="info-label">Email</span><span class="info-value" id="d-email">—</span></div>
+        <div class="info-row"><span class="info-label">Phone</span><span class="info-value" id="d-phone">—</span></div>
+        <div class="info-row"><span class="info-label">Course</span><span class="info-value" id="d-course">—</span></div>
+        <div class="info-row"><span class="info-label">Year</span><span class="info-value" id="d-year">—</span></div>
+        <div class="info-row"><span class="info-label">Status</span><span class="info-value" id="d-status">—</span></div>
+      </div>
+
+      <!-- Room Info -->
+      <div class="info-card">
+        <div class="info-card-title">My Room</div>
+        <div class="info-row"><span class="info-label">Room Number</span><span class="info-value" id="r-number">—</span></div>
+        <div class="info-row"><span class="info-label">Block</span><span class="info-value" id="r-block">—</span></div>
+        <div class="info-row"><span class="info-label">Check-in Date</span><span class="info-value" id="r-checkin">—</span></div>
+        <div class="info-row"><span class="info-label">Fee Due</span><span class="info-value" id="r-fee">—</span></div>
+      </div>
+    </div>
+
+    <!-- Quick Links -->
+    <div class="quick-links">
+      <a class="ql" href="student-fees.html">
+        <div class="ql-icon">💳</div>
+        <div class="ql-title">Pay Fees</div>
+        <div class="ql-sub">View dues & make payment</div>
+      </a>
+      <a class="ql" href="student-complaints.html">
+        <div class="ql-icon">📋</div>
+        <div class="ql-title">Raise Complaint</div>
+        <div class="ql-sub">Report an issue</div>
+      </a>
+      <a class="ql" href="student-notifications.html">
+        <div class="ql-icon">🔔</div>
+        <div class="ql-title">Notifications</div>
+        <div class="ql-sub">View announcements</div>
+      </a>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Auth Guard ─────────────────────────────────────────
+const userType = localStorage.getItem('hostelos_type');
+
+
+const token    = localStorage.getItem('hostelos_token');
+if (!token || userType !== 'student') {
+  window.location.href = 'student-login.html';
+}
+
+const API_BASE = 'http://localhost:5000/api';
+function getToken() { return localStorage.getItem('hostelos_token'); }
+
+async function apiFetch(endpoint, options = {}) {
+  const res = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}`, ...(options.headers || {}) }
+  });
+  if (res.status === 401) { localStorage.clear(); window.location.href = 'student-login.html'; return null; }
+  return res.json();
+}
+
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast show ${type}`;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+function logout() {
+  localStorage.clear();
+  window.location.href = 'student-login.html';
+}
+
+async function loadDashboard() {
+  // GET /api/auth/me → get current student info
+  const me = await apiFetch('/auth/me');
+  if (!me || !me.user) return;
+
+  const s = me.user;
+  const fullName = `${s.firstName} ${s.lastName}`;
+  const initials = `${s.firstName[0]}${s.lastName[0]}`;
+
+  // Update sidebar
+  document.getElementById('user-initials').textContent = initials;
+  document.getElementById('user-name').textContent = fullName;
+  document.getElementById('user-room').textContent = `Room: ${s.roomNumber || 'Unassigned'}`;
+
+  // Welcome banner
+  document.getElementById('welcome-title').textContent = `Welcome, ${s.firstName}! 👋`;
+  document.getElementById('welcome-sub').textContent = `Student ID: ${s.studentId} · ${s.course || ''} ${s.year || ''}`;
+
+  // KPIs
+  document.getElementById('kpi-room').textContent = s.roomNumber || 'Unassigned';
+  document.getElementById('kpi-block').textContent = s.block ? `Block ${s.block}` : 'Not assigned';
+
+  // Personal details
+  document.getElementById('d-sid').textContent    = s.studentId;
+  document.getElementById('d-email').textContent  = s.email;
+  document.getElementById('d-phone').textContent  = s.phone || '—';
+  document.getElementById('d-course').textContent = s.course || '—';
+  document.getElementById('d-year').textContent   = s.year || '—';
+  document.getElementById('d-status').textContent = s.status;
+
+  // Room details
+  document.getElementById('r-number').textContent  = s.roomNumber || 'Unassigned';
+  document.getElementById('r-block').textContent   = s.block ? `Block ${s.block}` : '—';
+  document.getElementById('r-checkin').textContent = s.checkInDate ? new Date(s.checkInDate).toLocaleDateString('en-IN') : '—';
+
+  // Load fee status
+  // GET /api/fees?studentId=me&month=current
+  const feeData = await apiFetch('/fees?limit=1');
+  if (feeData && feeData.fees && feeData.fees.length) {
+    const latestFee = feeData.fees[0];
+    const feeEl = document.getElementById('kpi-fee-status');
+    feeEl.textContent = latestFee.status;
+    feeEl.className = `kpi-val ${latestFee.status === 'Paid' ? 'green' : latestFee.status === 'Overdue' ? 'red' : 'brown'}`;
+    document.getElementById('kpi-fee-sub').textContent = `₹${latestFee.amount?.toLocaleString()} · ${latestFee.month}`;
+    document.getElementById('r-fee').textContent = latestFee.status === 'Paid' ? 'Cleared ✅' : `₹${latestFee.amount?.toLocaleString()} due`;
+  } else {
+    document.getElementById('kpi-fee-status').textContent = 'No Record';
+  }
+
+  // Load complaints count
+  const cData = await apiFetch('/complaints');
+  if (cData && cData.complaints) {
+    document.getElementById('kpi-complaints').textContent = cData.complaints.length;
+    const open = cData.complaints.filter(c => c.status !== 'Resolved').length;
+    document.getElementById('kpi-complaints-sub').textContent = `${open} open, ${cData.complaints.length - open} resolved`;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadDashboard);
+</script>
+</body>
+</html>

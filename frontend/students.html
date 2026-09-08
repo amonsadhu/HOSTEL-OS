@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HostelOS — Student Registration</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Open+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+.student-avatar { width:32px;height:32px;border-radius:50%;background:var(--blue-light);color:var(--blue);display:flex;align-items:center;justify-content:center;font-family:var(--sans);font-size:12px;font-weight:700;flex-shrink:0; }
+.td-user { display:flex;align-items:center;gap:10px; }
+.detail-grid { display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px; }
+.detail-item label { font-family:var(--sans);font-size:10px;font-weight:700;color:var(--muted2);letter-spacing:0.08em;text-transform:uppercase;display:block;margin-bottom:3px; }
+.detail-item span { font-family:var(--body);font-size:13px;color:var(--text); }
+</style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-logo"><div class="logo-mark">H</div><span>HostelOS</span></div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Main</div>
+    <a class="nav-item" href="index.html"><span class="ni">📊</span> Dashboard</a>
+    <a class="nav-item active" href="students.html"><span class="ni">👥</span> Students</a>
+    <a class="nav-item" href="rooms.html"><span class="ni">🏠</span> Rooms</a>
+    <a class="nav-item" href="fees.html"><span class="ni">💳</span> Fees</a>
+    <div class="nav-section-label">Manage</div>
+    <a class="nav-item" href="complaints.html"><span class="ni">📋</span> Complaints <span class="nav-badge">3</span></a>
+    <a class="nav-item" href="attendance.html"><span class="ni">📅</span> Attendance</a>
+    <a class="nav-item" href="notifications.html"><span class="ni">🔔</span> Notifications</a>
+  </nav>
+  <div class="sidebar-footer"><div class="sidebar-user"><div class="user-avatar">AD</div><div><div class="user-name">Admin User</div><div class="user-role">Super Administrator</div></div></div></div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="page-title">Students</div>
+      <div class="breadcrumb">— Registration & Management</div>
+    </div>
+    <div class="topbar-right">
+      <button class="topbar-btn secondary" onclick="exportStudents()">↓ Export CSV</button>
+      <button class="topbar-btn" onclick="openModal('add-modal')">+ Register Student</button>
+    </div>
+  </div>
+
+  <div class="page-content">
+    <!-- KPIs: API: GET /api/students/summary -->
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-top"><span class="kpi-label">Total Students</span><span class="kpi-icon">👥</span></div><div class="kpi-val">342</div><div class="kpi-sub">Across all blocks</div></div>
+      <div class="kpi"><div class="kpi-top"><span class="kpi-label">Active</span><span class="kpi-icon">✅</span></div><div class="kpi-val green">298</div><div class="kpi-sub up">Currently residing</div></div>
+      <div class="kpi"><div class="kpi-top"><span class="kpi-label">Pending Approval</span><span class="kpi-icon">⏳</span></div><div class="kpi-val brown">28</div><div class="kpi-sub">Awaiting verification</div></div>
+      <div class="kpi"><div class="kpi-top"><span class="kpi-label">Checked Out</span><span class="kpi-icon">🚪</span></div><div class="kpi-val red">16</div><div class="kpi-sub">This semester</div></div>
+    </div>
+
+    <!-- Table Card: API: GET /api/students?page=1&limit=20&search=&status= -->
+    <div class="card">
+      <div class="filter-bar">
+        <input class="search-input" type="text" id="search-input" placeholder="Search by name, ID, room…" oninput="filterStudents()">
+        <select class="filter-select" id="status-filter" onchange="filterStudents()">
+          <option value="">All Status</option>
+          <option value="Active">Active</option>
+          <option value="Pending">Pending</option>
+          <option value="Inactive">Inactive</option>
+        </select>
+        <select class="filter-select" id="block-filter" onchange="filterStudents()">
+          <option value="">All Blocks</option>
+          <option value="A">Block A</option>
+          <option value="B">Block B</option>
+          <option value="C">Block C</option>
+          <option value="D">Block D</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Student</th><th>ID</th><th>Room</th><th>Course</th><th>Contact</th><th>Status</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="students-table">
+            <!-- Populated by JS / API -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD STUDENT MODAL -->
+<div class="modal-overlay" id="add-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Register New Student</span>
+      <button class="modal-close" onclick="closeModal('add-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- API: POST /api/students -->
+      <div class="form-grid">
+        <div class="form-group"><label>First Name *</label><input type="text" id="f-fname" placeholder="e.g. Arjun"></div>
+        <div class="form-group"><label>Last Name *</label><input type="text" id="f-lname" placeholder="e.g. Mehra"></div>
+        <div class="form-group"><label>Email *</label><input type="email" id="f-email" placeholder="student@email.com"></div>
+        <div class="form-group"><label>Phone *</label><input type="tel" id="f-phone" placeholder="+91 98765 43210"></div>
+        <div class="form-group"><label>Course / Branch</label><input type="text" id="f-course" placeholder="e.g. B.Tech CSE"></div>
+        <div class="form-group"><label>Year</label><select id="f-year"><option>1st Year</option><option>2nd Year</option><option>3rd Year</option><option>4th Year</option></select></div>
+        <div class="form-group"><label>Gender</label><select id="f-gender"><option>Male</option><option>Female</option><option>Other</option></select></div>
+        <div class="form-group"><label>Date of Birth</label><input type="date" id="f-dob"></div>
+        <div class="form-group full"><label>Address</label><textarea id="f-address" placeholder="Home address…"></textarea></div>
+        <div class="form-group"><label>Emergency Contact</label><input type="tel" id="f-emergency" placeholder="Parent / Guardian"></div>
+        <div class="form-group"><label>ID Proof Type</label><select id="f-idtype"><option>Aadhar Card</option><option>Passport</option><option>PAN Card</option><option>Voter ID</option></select></div>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="submitStudent()">Register Student</button>
+      <button class="btn-secondary" onclick="closeModal('add-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- VIEW STUDENT MODAL -->
+<div class="modal-overlay" id="view-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="view-modal-title">Student Details</span>
+      <button class="modal-close" onclick="closeModal('view-modal')">✕</button>
+    </div>
+    <div class="modal-body" id="view-modal-body"></div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="closeModal('view-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+
+<script>
+/* ═══════════════════════════════════════════
+   API INTEGRATION GUIDE — students.html
+   ═══════════════════════════════════════════
+   GET    /api/students?page&limit&search&status&block
+   POST   /api/students          → create student
+   GET    /api/students/:id      → get student detail
+   PUT    /api/students/:id      → update student
+   DELETE /api/students/:id      → remove student
+*/
+const API_BASE = 'http://localhost:5000/api';
+
+function getToken() {
+  return localStorage.getItem('hostelos_token');
+}
+
+async function apiFetch(endpoint, options = {}) {
+  const res = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${getToken()}`,
+      ...(options.headers || {})
+    }
+  });
+  if (res.status === 401) {
+    localStorage.clear();
+    window.location.href = 'admin-login.html';
+    return null;
+  }
+  return res.json();
+}
+
+// Current filter state
+let currentFilters = { search: '', status: '', block: '', page: 1 };
+
+async function loadStudents() {
+  const query = new URLSearchParams({
+    search: currentFilters.search,
+    status: currentFilters.status,
+    block:  currentFilters.block,
+    page:   currentFilters.page,
+    limit:  20
+  }).toString();
+
+  const data = await apiFetch(`/students?${query}`);
+  if (!data) return;
+
+  renderTable(data.students);
+
+  // Update KPIs
+  const summary = await apiFetch('/students/summary');
+  if (summary) {
+    document.querySelector('#kpi-grid .kpi:nth-child(1) .kpi-val').textContent = summary.total;
+    document.querySelector('#kpi-grid .kpi:nth-child(2) .kpi-val').textContent = summary.active;
+    document.querySelector('#kpi-grid .kpi:nth-child(3) .kpi-val').textContent = summary.pending;
+    document.querySelector('#kpi-grid .kpi:nth-child(4) .kpi-val').textContent = summary.inactive;
+  }
+}
+
+function renderTable(students) {
+  const tbody = document.getElementById('students-table');
+  if (!students || !students.length) {
+    tbody.innerHTML = `<tr><td colspan="7">
+      <div class="empty-state">
+        <div class="empty-icon">👥</div>
+        <div class="empty-title">No students found</div>
+        <div class="empty-sub">Try adjusting your search or filters</div>
+      </div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = students.map(s => {
+    const initials = `${s.firstName[0]}${s.lastName[0]}`;
+    const pillClass = s.status === 'Active' ? 'pill-green' : s.status === 'Pending' ? 'pill-yellow' : 'pill-red';
+    return `<tr>
+      <td><div class="td-user">
+        <div class="student-avatar">${initials}</div>
+        <div><div class="td-name">${s.firstName} ${s.lastName}</div>
+        <div style="font-size:11px;color:var(--muted2)">${s.email}</div></div>
+      </div></td>
+      <td class="td-mono">${s.studentId}</td>
+      <td class="td-mono">${s.roomNumber || 'Unassigned'}</td>
+      <td>${s.course || '—'} · ${s.year || '—'}</td>
+      <td class="td-mono">${s.phone || '—'}</td>
+      <td><span class="pill ${pillClass}">${s.status}</span></td>
+      <td style="display:flex;gap:6px;">
+        <button class="btn-sm blue" onclick="viewStudent('${s._id}')">View</button>
+        <button class="btn-danger" onclick="deleteStudent('${s._id}')">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function filterStudents() {
+  currentFilters.search = document.getElementById('search-input').value;
+  currentFilters.status = document.getElementById('status-filter').value;
+  currentFilters.block  = document.getElementById('block-filter').value;
+  currentFilters.page   = 1;
+  loadStudents();
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast show ${type}`;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+async function submitStudent() {
+  const fname = document.getElementById('f-fname').value.trim();
+  const lname = document.getElementById('f-lname').value.trim();
+  const email = document.getElementById('f-email').value.trim();
+  const phone = document.getElementById('f-phone').value.trim();
+
+  if (!fname || !lname || !email) {
+    showToast('Please fill all required fields', 'error');
+    return;
+  }
+
+  const body = {
+    firstName: fname,
+    lastName:  lname,
+    email,
+    phone,
+    course: document.getElementById('f-course').value,
+    year:   document.getElementById('f-year').value,
+    gender: document.getElementById('f-gender').value,
+    dateOfBirth: document.getElementById('f-dob').value,
+    address: document.getElementById('f-address').value,
+    emergencyContact: { phone: document.getElementById('f-emergency').value },
+    idProof: { type: document.getElementById('f-idtype').value }
+  };
+
+  const data = await apiFetch('/students', {
+    method: 'POST',
+    body: JSON.stringify(body)
+  });
+
+  if (!data) return;
+
+  if (!data.success) {
+    showToast(data.message || 'Error registering student', 'error');
+    return;
+  }
+
+  // Show the generated default password to admin
+  showToast(`Student registered! Default password: ${data.message.split(': ')[1]}`, 'success');
+  closeModal('add-modal');
+  loadStudents();
+}
+
+async function viewStudent(id) {
+  const data = await apiFetch(`/students/${id}`);
+  if (!data || !data.student) return;
+  const s = data.student;
+  document.getElementById('view-modal-title').textContent = `${s.firstName} ${s.lastName}`;
+  document.getElementById('view-modal-body').innerHTML = `
+    <div class="detail-grid">
+      <div class="detail-item"><label>Student ID</label><span>${s.studentId}</span></div>
+      <div class="detail-item"><label>Status</label><span>
+        <span class="pill ${s.status === 'Active' ? 'pill-green' : s.status === 'Pending' ? 'pill-yellow' : 'pill-red'}">${s.status}</span>
+      </span></div>
+      <div class="detail-item"><label>Email</label><span>${s.email}</span></div>
+      <div class="detail-item"><label>Phone</label><span>${s.phone || '—'}</span></div>
+      <div class="detail-item"><label>Room</label><span>${s.roomNumber || 'Unassigned'}</span></div>
+      <div class="detail-item"><label>Course</label><span>${s.course || '—'}</span></div>
+      <div class="detail-item"><label>Year</label><span>${s.year || '—'}</span></div>
+      <div class="detail-item"><label>Gender</label><span>${s.gender || '—'}</span></div>
+    </div>`;
+  openModal('view-modal');
+}
+
+async function deleteStudent(id) {
+  if (!confirm('Remove this student from the system?')) return;
+  const data = await apiFetch(`/students/${id}`, { method: 'DELETE' });
+  if (!data) return;
+  if (!data.success) { showToast(data.message, 'error'); return; }
+  showToast('Student removed', 'error');
+  loadStudents();
+}
+
+async function exportStudents() {
+  // Fetch all students then build CSV
+  const data = await apiFetch('/students?limit=1000');
+  if (!data || !data.students) return;
+  const csv = [
+    'ID,First Name,Last Name,Email,Phone,Room,Course,Year,Status',
+    ...data.students.map(s =>
+      `${s.studentId},${s.firstName},${s.lastName},${s.email},${s.phone || ''},${s.roomNumber || ''},${s.course || ''},${s.year || ''},${s.status}`
+    )
+  ].join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'students.csv';
+  a.click();
+}
+
+document.addEventListener('DOMContentLoaded', loadStudents);
+</script>
+</body></html>

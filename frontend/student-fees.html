@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HostelOS — My Fees & Payments</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Open+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="student-shared.css">
+<style>
+/* Payment Method Selector */
+.pay-methods { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px; }
+.pay-method {
+  border:2px solid var(--border); border-radius:10px; padding:16px 12px;
+  text-align:center; cursor:pointer; transition:all 0.2s;
+  background:white;
+}
+.pay-method:hover { border-color:var(--brown); background:var(--brown-light); }
+.pay-method.selected { border-color:var(--brown); background:var(--brown-light); }
+.pm-icon { font-size:24px; margin-bottom:6px; }
+.pm-label { font-family:var(--sans); font-size:12px; font-weight:700; color:var(--blue); }
+
+/* Payment Panels */
+.pay-panel { display:none; }
+.pay-panel.active { display:block; }
+
+/* Card Input */
+.card-input-wrap { position:relative; }
+.card-input-wrap input { letter-spacing:0.12em; font-family:var(--sans); }
+.card-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+
+/* UPI Panel */
+.upi-qr {
+  width:160px; height:160px; margin:0 auto 16px;
+  background:var(--bg2); border:2px dashed var(--border2);
+  border-radius:12px; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:6px;
+}
+.upi-qr-icon { font-size:40px; }
+.upi-qr-text { font-family:var(--sans); font-size:10px; color:var(--muted2); font-weight:600; letter-spacing:0.08em; }
+.upi-id-display {
+  background:var(--bg2); border:1px solid var(--border);
+  border-radius:8px; padding:12px 16px; text-align:center;
+  font-family:var(--sans); font-size:14px; font-weight:700; color:var(--blue);
+  margin-bottom:16px;
+}
+
+/* Bank Transfer Panel */
+.bank-detail { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); }
+.bank-detail:last-child { border-bottom:none; }
+.bank-label { font-family:var(--body); font-size:12px; color:var(--muted); }
+.bank-value { font-family:var(--sans); font-size:13px; font-weight:700; color:var(--blue); }
+
+/* Success Screen */
+.success-screen {
+  text-align:center; padding:40px 20px; display:none;
+}
+.success-icon { font-size:64px; margin-bottom:16px; }
+.success-title { font-family:var(--sans); font-size:22px; font-weight:900; color:var(--green); letter-spacing:-0.5px; margin-bottom:8px; }
+.success-sub { font-family:var(--body); font-size:14px; color:var(--muted); margin-bottom:24px; }
+.receipt-box {
+  background:var(--bg2); border:1px solid var(--border);
+  border-radius:12px; padding:20px; text-align:left; margin-bottom:20px;
+}
+.receipt-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border); font-family:var(--body); font-size:13px; }
+.receipt-row:last-child { border-bottom:none; }
+.receipt-label { color:var(--muted); }
+.receipt-value { font-family:var(--sans); font-weight:700; color:var(--blue); }
+
+/* Fee History Table */
+.status-due { color:var(--yellow); }
+.status-paid { color:var(--green); }
+.status-overdue { color:var(--red); }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-mark">H</div>
+    <span>HostelOS</span>
+    <span class="sidebar-badge">STUDENT</span>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">My Portal</div>
+    <a class="nav-item" href="student-dashboard.html"><span class="ni">🏠</span> Dashboard</a>
+    <a class="nav-item active" href="student-fees.html"><span class="ni">💳</span> My Fees</a>
+    <a class="nav-item" href="student-complaints.html"><span class="ni">📋</span> My Complaints</a>
+    <a class="nav-item" href="student-notifications.html"><span class="ni">🔔</span> Notifications</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="user-avatar" id="user-initials">ST</div>
+      <div>
+        <div class="user-name" id="user-name">Student</div>
+        <div class="user-role" id="user-room">Room: —</div>
+      </div>
+    </div>
+    <button class="logout-btn" onclick="logout()">← Logout</button>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="page-title">My Fees</div>
+      <div class="breadcrumb">— Payment Portal</div>
+    </div>
+    <div class="topbar-right">
+      <button class="topbar-btn" onclick="openPayModal()">💳 Pay Now</button>
+    </div>
+  </div>
+
+  <div class="page-content">
+
+    <!-- KPIs: API GET /api/fees (student's own) -->
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-top"><span class="kpi-label">Total Paid</span><span class="kpi-icon">✅</span></div><div class="kpi-val green" id="kpi-paid">₹0</div><div class="kpi-sub">This year</div></div>
+      <div class="kpi"><div class="kpi-top"><span class="kpi-label">Amount Due</span><span class="kpi-icon">⏳</span></div><div class="kpi-val brown" id="kpi-due">₹0</div><div class="kpi-sub">Current month</div></div>
+      <div class="kpi"><div class="kpi-top"><span class="kpi-label">Overdue</span><span class="kpi-icon">⚠️</span></div><div class="kpi-val red" id="kpi-overdue">₹0</div><div class="kpi-sub">Pay immediately</div></div>
+    </div>
+
+    <!-- Fee History -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Payment History</span>
+        <button class="topbar-btn" onclick="openPayModal()" style="font-size:11px;padding:6px 14px;">+ Pay Now</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Month</th><th>Amount</th><th>Due Date</th><th>Paid On</th><th>Mode</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody id="fee-table">
+            <tr><td colspan="7"><div class="empty-state"><div class="empty-icon">💳</div><div class="empty-title">No fee records found</div><div class="empty-sub">Your payment history will appear here</div></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAYMENT MODAL -->
+<div class="modal-overlay" id="pay-modal">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <span class="modal-title" id="pay-modal-title">Make Payment</span>
+      <button class="modal-close" onclick="closePayModal()">✕</button>
+    </div>
+
+    <!-- Payment Form -->
+    <div id="pay-form-section">
+      <div class="modal-body">
+        <div style="background:var(--brown-light);border:1px solid rgba(122,79,45,0.2);border-radius:10px;padding:14px 16px;margin-bottom:20px;">
+          <div style="font-family:var(--sans);font-size:11px;color:var(--brown);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;">Amount Due</div>
+          <div style="font-family:var(--sans);font-size:28px;font-weight:900;color:var(--brown);" id="pay-amount-display">₹0</div>
+          <div style="font-family:var(--body);font-size:12px;color:var(--muted);" id="pay-month-display">—</div>
+        </div>
+
+        <!-- Payment Method Selector -->
+        <div style="font-family:var(--sans);font-size:11px;font-weight:700;color:var(--blue);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:10px;">Choose Payment Method</div>
+        <div class="pay-methods">
+          <div class="pay-method selected" onclick="selectMethod('card',this)">
+            <div class="pm-icon">💳</div>
+            <div class="pm-label">Card</div>
+          </div>
+          <div class="pay-method" onclick="selectMethod('upi',this)">
+            <div class="pm-icon">📱</div>
+            <div class="pm-label">UPI</div>
+          </div>
+          <div class="pay-method" onclick="selectMethod('bank',this)">
+            <div class="pm-icon">🏦</div>
+            <div class="pm-label">Bank Transfer</div>
+          </div>
+        </div>
+
+        <!-- CARD PANEL -->
+        <div class="pay-panel active" id="panel-card">
+          <div class="form-group">
+            <label>Card Number</label>
+            <input type="text" id="card-number" placeholder="1234 5678 9012 3456" maxlength="19" oninput="formatCard(this)">
+          </div>
+          <div class="form-group">
+            <label>Cardholder Name</label>
+            <input type="text" id="card-name" placeholder="Name on card">
+          </div>
+          <div class="card-row">
+            <div class="form-group">
+              <label>Expiry Date</label>
+              <input type="text" id="card-expiry" placeholder="MM/YY" maxlength="5" oninput="formatExpiry(this)">
+            </div>
+            <div class="form-group">
+              <label>CVV</label>
+              <input type="password" id="card-cvv" placeholder="•••" maxlength="3">
+            </div>
+          </div>
+          <div style="font-family:var(--body);font-size:11px;color:var(--muted2);margin-top:4px;">🔒 This is a demo — no real payment will be processed</div>
+        </div>
+
+        <!-- UPI PANEL -->
+        <div class="pay-panel" id="panel-upi">
+          <div class="upi-qr">
+            <div class="upi-qr-icon">▦</div>
+            <div class="upi-qr-text">SCAN TO PAY</div>
+          </div>
+          <div style="font-family:var(--body);font-size:12px;color:var(--muted);text-align:center;margin-bottom:12px;">Or pay using UPI ID</div>
+          <div class="upi-id-display">hostelos@upi</div>
+          <div class="form-group">
+            <label>Your UPI ID (for reference)</label>
+            <input type="text" id="upi-id" placeholder="yourname@upi">
+          </div>
+          <div style="font-family:var(--body);font-size:11px;color:var(--muted2);">🔒 This is a demo — no real payment will be processed</div>
+        </div>
+
+        <!-- BANK TRANSFER PANEL -->
+        <div class="pay-panel" id="panel-bank">
+          <div style="font-family:var(--sans);font-size:11px;font-weight:700;color:var(--blue);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:12px;">Transfer to this account</div>
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px;">
+            <div class="bank-detail"><span class="bank-label">Account Name</span><span class="bank-value">HostelOS Pvt. Ltd.</span></div>
+            <div class="bank-detail"><span class="bank-label">Account Number</span><span class="bank-value">1234 5678 9012</span></div>
+            <div class="bank-detail"><span class="bank-label">IFSC Code</span><span class="bank-value">HDFC0001234</span></div>
+            <div class="bank-detail"><span class="bank-label">Bank</span><span class="bank-value">HDFC Bank</span></div>
+          </div>
+          <div class="form-group">
+            <label>Transaction Reference Number</label>
+            <input type="text" id="bank-txn" placeholder="Enter UTR / Reference number">
+          </div>
+          <div style="font-family:var(--body);font-size:11px;color:var(--muted2);">🔒 This is a demo — no real payment will be processed</div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn-primary" onclick="processPayment()" id="pay-btn">Pay Now</button>
+        <button class="btn-secondary" onclick="closePayModal()">Cancel</button>
+      </div>
+    </div>
+
+    <!-- SUCCESS SCREEN -->
+    <div class="success-screen" id="success-section">
+      <div class="success-icon">✅</div>
+      <div class="success-title">Payment Successful!</div>
+      <div class="success-sub">Your hostel fee has been recorded successfully.</div>
+      <div class="receipt-box" id="receipt-box"></div>
+      <button class="btn-primary" style="width:100%;" onclick="closePayModal()">Done</button>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Auth Guard ─────────────────────────────────────────
+const userType = localStorage.getItem('hostelos_type');
+const token    = localStorage.getItem('hostelos_token');
+if (!token || userType !== 'student') window.location.href = 'student-login.html';
+
+
+
+const API_BASE = 'http://localhost:5000/api';
+function getToken() { return localStorage.getItem('hostelos_token'); }
+
+async function apiFetch(endpoint, options = {}) {
+  const res = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}`, ...(options.headers || {}) }
+  });
+  if (res.status === 401) { localStorage.clear(); window.location.href = 'student-login.html'; return null; }
+  return res.json();
+}
+
+function logout() { localStorage.clear(); window.location.href = 'student-login.html'; }
+
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast show ${type}`;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+let currentFeeId = null;
+let currentAmount = 0;
+let currentMonth = '';
+let selectedPayMethod = 'card';
+
+// ── Load user info ─────────────────────────────────────
+async function loadUserInfo() {
+  const me = await apiFetch('/auth/me');
+  if (!me || !me.user) return;
+  const s = me.user;
+  document.getElementById('user-initials').textContent = `${s.firstName[0]}${s.lastName[0]}`;
+  document.getElementById('user-name').textContent = `${s.firstName} ${s.lastName}`;
+  document.getElementById('user-room').textContent = `Room: ${s.roomNumber || '—'}`;
+}
+
+// ── Load fees ──────────────────────────────────────────
+// API: GET /api/fees (backend filters by logged-in student automatically)
+async function loadFees() {
+  const data = await apiFetch('/fees?limit=50');
+  if (!data) return;
+
+  const fees = data.fees || [];
+  let totalPaid = 0, totalDue = 0, totalOverdue = 0;
+
+  fees.forEach(f => {
+    if (f.status === 'Paid') totalPaid += f.amount;
+    else if (f.status === 'Due') totalDue += f.amount;
+    else if (f.status === 'Overdue') totalOverdue += f.amount;
+  });
+
+  document.getElementById('kpi-paid').textContent    = `₹${totalPaid.toLocaleString()}`;
+  document.getElementById('kpi-due').textContent     = `₹${totalDue.toLocaleString()}`;
+  document.getElementById('kpi-overdue').textContent = `₹${totalOverdue.toLocaleString()}`;
+
+  const tbody = document.getElementById('fee-table');
+  if (!fees.length) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">💳</div><div class="empty-title">No fee records found</div><div class="empty-sub">Your payment history will appear here</div></div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = fees.map(f => {
+    const pc = f.status === 'Paid' ? 'pill-green' : f.status === 'Due' ? 'pill-yellow' : 'pill-red';
+    return `<tr>
+      <td class="td-name">${f.month}</td>
+      <td style="font-family:var(--sans);font-weight:700;color:var(--blue)">₹${f.amount?.toLocaleString()}</td>
+      <td class="td-mono">${f.dueDate ? f.dueDate.slice(0,10) : '—'}</td>
+      <td class="td-mono">${f.paidDate ? f.paidDate.slice(0,10) : '—'}</td>
+      <td class="td-mono">${f.paymentMode || '—'}</td>
+      <td><span class="pill ${pc}">${f.status}</span></td>
+      <td>${f.status !== 'Paid'
+        ? `<button class="btn-primary" style="padding:6px 14px;font-size:11px;" onclick="openPayModalForFee('${f._id}',${f.amount},'${f.month}')">Pay</button>`
+        : '<span style="color:var(--green);font-family:var(--sans);font-size:12px;font-weight:700;">✓ Paid</span>'
+      }</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Payment Modal ──────────────────────────────────────
+function openPayModal() {
+  // Find first unpaid fee
+  const payBtn = document.querySelector('#fee-table button');
+  if (!payBtn) { showToast('No pending fees found!', 'success'); return; }
+  payBtn.click();
+}
+
+function openPayModalForFee(feeId, amount, month) {
+  currentFeeId  = feeId;
+  currentAmount = amount;
+  currentMonth  = month;
+
+  document.getElementById('pay-amount-display').textContent = `₹${amount.toLocaleString()}`;
+  document.getElementById('pay-month-display').textContent  = month;
+  document.getElementById('pay-form-section').style.display = 'block';
+  document.getElementById('success-section').style.display  = 'none';
+  document.getElementById('pay-modal').classList.add('open');
+}
+
+function closePayModal() {
+  document.getElementById('pay-modal').classList.remove('open');
+  // Reset form
+  document.getElementById('card-number').value = '';
+  document.getElementById('card-name').value   = '';
+  document.getElementById('card-expiry').value = '';
+  document.getElementById('card-cvv').value    = '';
+  document.getElementById('success-section').style.display  = 'none';
+  document.getElementById('pay-form-section').style.display = 'block';
+  selectMethod('card', document.querySelector('.pay-method'));
+}
+
+function selectMethod(method, el) {
+  selectedPayMethod = method;
+  document.querySelectorAll('.pay-method').forEach(m => m.classList.remove('selected'));
+  el.classList.add('selected');
+  document.querySelectorAll('.pay-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(`panel-${method}`).classList.add('active');
+}
+
+// ── Card formatting helpers ────────────────────────────
+function formatCard(input) {
+  let val = input.value.replace(/\D/g, '').substring(0, 16);
+  input.value = val.replace(/(.{4})/g, '$1 ').trim();
+}
+function formatExpiry(input) {
+  let val = input.value.replace(/\D/g, '').substring(0, 4);
+  if (val.length >= 2) val = val.slice(0,2) + '/' + val.slice(2);
+  input.value = val;
+}
+
+// ── Process Payment ────────────────────────────────────
+async function processPayment() {
+  const btn = document.getElementById('pay-btn');
+
+  // Validate based on method
+  if (selectedPayMethod === 'card') {
+    const num  = document.getElementById('card-number').value.replace(/\s/g,'');
+    const name = document.getElementById('card-name').value.trim();
+    const exp  = document.getElementById('card-expiry').value;
+    const cvv  = document.getElementById('card-cvv').value;
+    if (num.length < 16 || !name || exp.length < 5 || cvv.length < 3) {
+      showToast('Please fill all card details', 'error'); return;
+    }
+  } else if (selectedPayMethod === 'upi') {
+    const upiId = document.getElementById('upi-id').value.trim();
+    if (!upiId) { showToast('Please enter your UPI ID', 'error'); return; }
+  } else if (selectedPayMethod === 'bank') {
+    const txn = document.getElementById('bank-txn').value.trim();
+    if (!txn) { showToast('Please enter transaction reference number', 'error'); return; }
+  }
+
+  btn.textContent = 'Processing…';
+  btn.disabled = true;
+
+  // Simulate processing delay
+  await new Promise(r => setTimeout(r, 1500));
+
+  // API: PUT /api/fees/:id { status: 'Paid', paymentMode, paidDate, transactionId }
+  const modeMap = { card: 'Card', upi: 'UPI', bank: 'Bank Transfer' };
+  const txnId = 'TXN' + Date.now().toString().slice(-8);
+
+  const data = await apiFetch(`/fees/${currentFeeId}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      status:        'Paid',
+      paymentMode:   modeMap[selectedPayMethod],
+      paidDate:      new Date().toISOString().slice(0,10),
+      transactionId: txnId
+    })
+  });
+
+  btn.textContent = 'Pay Now';
+  btn.disabled = false;
+
+  if (!data || !data.success) {
+    showToast('Payment failed. Try again.', 'error'); return;
+  }
+
+  // Show success screen
+  document.getElementById('pay-form-section').style.display = 'none';
+  document.getElementById('success-section').style.display  = 'block';
+
+  document.getElementById('receipt-box').innerHTML = `
+    <div class="receipt-row"><span class="receipt-label">Transaction ID</span><span class="receipt-value">${txnId}</span></div>
+    <div class="receipt-row"><span class="receipt-label">Amount Paid</span><span class="receipt-value">₹${currentAmount.toLocaleString()}</span></div>
+    <div class="receipt-row"><span class="receipt-label">Month</span><span class="receipt-value">${currentMonth}</span></div>
+    <div class="receipt-row"><span class="receipt-label">Payment Mode</span><span class="receipt-value">${modeMap[selectedPayMethod]}</span></div>
+    <div class="receipt-row"><span class="receipt-label">Date</span><span class="receipt-value">${new Date().toLocaleDateString('en-IN')}</span></div>
+    <div class="receipt-row"><span class="receipt-label">Status</span><span class="receipt-value" style="color:var(--green)">✅ Successful</span></div>
+  `;
+
+  // Reload fees table
+  loadFees();
+}
+
+document.addEventListener('DOMContentLoaded', () => { loadUserInfo(); loadFees(); });
+</script>
+</body>
+</html>

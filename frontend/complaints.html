@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HostelOS — Complaint Handling</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Open+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+.complaint-card {
+  background:white; border:1px solid var(--border); border-radius:12px;
+  padding:18px; margin-bottom:12px; transition:all 0.2s;
+  border-left:4px solid var(--border);
+}
+.complaint-card.urgent { border-left-color:var(--red); }
+.complaint-card.open { border-left-color:var(--brown); }
+.complaint-card.resolved { border-left-color:var(--green); }
+.cc-top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
+.cc-id { font-family:var(--sans); font-size:11px; font-weight:700; color:var(--muted2); letter-spacing:0.06em; }
+.cc-title { font-family:var(--sans); font-size:14px; font-weight:700; color:var(--blue); margin-bottom:4px; }
+.cc-meta { font-family:var(--body); font-size:12px; color:var(--muted); }
+.cc-desc { font-family:var(--body); font-size:13px; color:var(--text); line-height:1.6; margin:8px 0 12px; }
+.cc-footer { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; }
+.cc-assigned { font-family:var(--body); font-size:11px; color:var(--muted2); }
+</style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-logo"><div class="logo-mark">H</div><span>HostelOS</span></div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Main</div>
+    <a class="nav-item" href="index.html"><span class="ni">📊</span> Dashboard</a>
+    <a class="nav-item" href="students.html"><span class="ni">👥</span> Students</a>
+    <a class="nav-item" href="rooms.html"><span class="ni">🏠</span> Rooms</a>
+    <a class="nav-item" href="fees.html"><span class="ni">💳</span> Fees</a>
+    <div class="nav-section-label">Manage</div>
+    <a class="nav-item active" href="complaints.html"><span class="ni">📋</span> Complaints <span class="nav-badge">3</span></a>
+    <a class="nav-item" href="attendance.html"><span class="ni">📅</span> Attendance</a>
+    <a class="nav-item" href="notifications.html"><span class="ni">🔔</span> Notifications</a>
+  </nav>
+  <div class="sidebar-footer"><div class="sidebar-user"><div class="user-avatar">AD</div><div><div class="user-name">Admin User</div><div class="user-role">Super Administrator</div></div></div></div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="page-title">Complaints</div>
+      <div class="breadcrumb">— Tracking & Resolution</div>
+    </div>
+    <div class="topbar-right">
+      <button class="topbar-btn" onclick="openModal('add-complaint-modal')">+ Raise Complaint</button>
+    </div>
+  </div>
+
+  <div class="page-content">
+    <!-- API: GET /api/complaints/summary -->
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-top"><span class="kpi-label">Total</span><span class="kpi-icon">📋</span></div><div class="kpi-val">47</div><div class="kpi-sub">All time</div></div>
+      <div class="kpi"><div class="kpi-top"><span class="kpi-label">Open</span><span class="kpi-icon">🟡</span></div><div class="kpi-val brown">11</div><div class="kpi-sub">Awaiting action</div></div>
+      <div class="kpi"><div class="kpi-top"><span class="kpi-label">Urgent</span><span class="kpi-icon">🔴</span></div><div class="kpi-val red">3</div><div class="kpi-sub down">Need immediate attention</div></div>
+      <div class="kpi"><div class="kpi-top"><span class="kpi-label">Resolved</span><span class="kpi-icon">✅</span></div><div class="kpi-val green">33</div><div class="kpi-sub up">70% resolution rate</div></div>
+    </div>
+
+    <!-- Filter + List: API: GET /api/complaints?status=&category=&page= -->
+    <div class="card">
+      <div class="filter-bar">
+        <input class="search-input" type="text" id="c-search" placeholder="Search complaints…" oninput="filterComplaints()">
+        <select class="filter-select" id="c-status" onchange="filterComplaints()">
+          <option value="">All Status</option>
+          <option value="Open">Open</option>
+          <option value="Urgent">Urgent</option>
+          <option value="In Progress">In Progress</option>
+          <option value="Resolved">Resolved</option>
+        </select>
+        <select class="filter-select" id="c-category" onchange="filterComplaints()">
+          <option value="">All Categories</option>
+          <option value="Maintenance">Maintenance</option>
+          <option value="Electrical">Electrical</option>
+          <option value="Plumbing">Plumbing</option>
+          <option value="Food">Food</option>
+          <option value="Cleanliness">Cleanliness</option>
+          <option value="Security">Security</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div style="padding:16px 20px;" id="complaints-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD COMPLAINT MODAL -->
+<div class="modal-overlay" id="add-complaint-modal">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">Raise New Complaint</span><button class="modal-close" onclick="closeModal('add-complaint-modal')">✕</button></div>
+    <div class="modal-body">
+      <!-- API: POST /api/complaints -->
+      <div class="form-grid">
+        <div class="form-group"><label>Student *</label><select id="cp-student"><option value="">Select student…</option><option>Arjun Mehra (A-204)</option><option>Priya Sharma (B-112)</option><option>Ravi Kulkarni (C-308)</option></select></div>
+        <div class="form-group"><label>Category *</label><select id="cp-category"><option>Maintenance</option><option>Electrical</option><option>Plumbing</option><option>Food</option><option>Cleanliness</option><option>Security</option><option>Other</option></select></div>
+        <div class="form-group full"><label>Title *</label><input type="text" id="cp-title" placeholder="Brief summary of the issue…"></div>
+        <div class="form-group full"><label>Description *</label><textarea id="cp-desc" placeholder="Describe the issue in detail…"></textarea></div>
+        <div class="form-group"><label>Priority</label><select id="cp-priority"><option>Normal</option><option>Urgent</option></select></div>
+        <div class="form-group"><label>Assign To</label><select id="cp-assign"><option value="">Unassigned</option><option>Maintenance Team</option><option>Electrician</option><option>Plumber</option><option>Warden</option></select></div>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="submitComplaint()">Submit Complaint</button>
+      <button class="btn-secondary" onclick="closeModal('add-complaint-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- UPDATE COMPLAINT MODAL -->
+<div class="modal-overlay" id="update-modal">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title" id="update-modal-title">Update Complaint</span><button class="modal-close" onclick="closeModal('update-modal')">✕</button></div>
+    <div class="modal-body">
+      <!-- API: PUT /api/complaints/:id -->
+      <div class="form-grid">
+        <div class="form-group"><label>Status</label><select id="upd-status"><option>Open</option><option>In Progress</option><option>Resolved</option></select></div>
+        <div class="form-group"><label>Assign To</label><select id="upd-assign"><option>Maintenance Team</option><option>Electrician</option><option>Plumber</option><option>Warden</option></select></div>
+        <div class="form-group full"><label>Resolution Notes</label><textarea id="upd-notes" placeholder="What was done to resolve this…"></textarea></div>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" id="update-save-btn">Save Update</button>
+      <button class="btn-secondary" onclick="closeModal('update-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API_BASE = 'http://localhost:5000/api';
+
+
+function getToken() { return localStorage.getItem('hostelos_token'); }
+
+async function apiFetch(endpoint, options = {}) {
+  const res = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}`, ...(options.headers || {}) }
+  });
+  if (res.status === 401) { localStorage.clear(); window.location.href = 'admin-login.html'; return null; }
+  return res.json();
+}
+
+async function loadComplaints() {
+  const status   = document.getElementById('c-status').value;
+  const category = document.getElementById('c-category').value;
+  const search   = document.getElementById('c-search').value;
+
+  const query = new URLSearchParams({ status, category, search }).toString();
+  const data = await apiFetch(`/complaints?${query}`);
+  if (!data) return;
+  renderComplaints(data.complaints || []);
+}
+
+function renderComplaints(complaints) {
+  const container = document.getElementById('complaints-list');
+  if (!complaints.length) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">No complaints found</div></div>`;
+    return;
+  }
+  container.innerHTML = complaints.map(c => {
+    const sc = c.status === 'Urgent' ? 'urgent' : c.status === 'Resolved' ? 'resolved' : 'open';
+    const pc = c.status === 'Urgent' ? 'pill-red' : c.status === 'Resolved' ? 'pill-green' : c.status === 'In Progress' ? 'pill-blue' : 'pill-yellow';
+    const studentName = c.studentId ? `${c.studentId.firstName} ${c.studentId.lastName}` : '—';
+    const room = c.studentId ? c.studentId.roomNumber : '—';
+    return `<div class="complaint-card ${sc}">
+      <div class="cc-top">
+        <div>
+          <div class="cc-id">${c.complaintId} · ${c.category}</div>
+          <div class="cc-title">${c.title}</div>
+          <div class="cc-meta">${studentName} · Room ${room} · ${c.createdAt ? c.createdAt.slice(0,10) : '—'}</div>
+        </div>
+        <span class="pill ${pc}">${c.status}</span>
+      </div>
+      <div class="cc-desc">${c.description}</div>
+      <div class="cc-footer">
+        <div class="cc-assigned">${c.assignedTo ? '👤 ' + c.assignedTo : '⚪ Unassigned'}</div>
+        <div style="display:flex;gap:8px;">
+          ${c.status !== 'Resolved' ? `<button class="btn-sm blue" onclick="openUpdate('${c._id}','${c.status}')">Update</button>` : ''}
+          ${c.status !== 'Resolved' ? `<button class="btn-sm brown" onclick="resolveComplaint('${c._id}')">Resolve</button>` : ''}
+          <button class="btn-danger" onclick="deleteComplaint('${c._id}')">✕</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterComplaints() { loadComplaints(); }
+
+function openUpdate(id, currentStatus) {
+  document.getElementById('upd-status').value = currentStatus;
+  document.getElementById('update-save-btn').onclick = async () => {
+    const data = await apiFetch(`/complaints/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        status: document.getElementById('upd-status').value,
+        assignedTo: document.getElementById('upd-assign').value,
+        resolutionNotes: document.getElementById('upd-notes').value
+      })
+    });
+    if (!data) return;
+    closeModal('update-modal');
+    showToast('Complaint updated', 'success');
+    loadComplaints();
+  };
+  openModal('update-modal');
+}
+
+async function resolveComplaint(id) {
+  const data = await apiFetch(`/complaints/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ status: 'Resolved', resolvedAt: new Date() })
+  });
+  if (!data) return;
+  showToast('Marked as resolved', 'success');
+  loadComplaints();
+}
+
+async function deleteComplaint(id) {
+  if (!confirm('Delete this complaint?')) return;
+  const data = await apiFetch(`/complaints/${id}`, { method: 'DELETE' });
+  if (!data) return;
+  showToast('Complaint deleted', 'error');
+  loadComplaints();
+}
+
+async function submitComplaint() {
+  const title = document.getElementById('cp-title').value.trim();
+  const desc  = document.getElementById('cp-desc').value.trim();
+  if (!title || !desc) { showToast('Please fill required fields', 'error'); return; }
+
+  const data = await apiFetch('/complaints', {
+    method: 'POST',
+    body: JSON.stringify({
+      title,
+      description: desc,
+      category: document.getElementById('cp-category').value,
+      priority: document.getElementById('cp-priority').value,
+      assignedTo: document.getElementById('cp-assign').value
+    })
+  });
+  if (!data) return;
+  if (!data.success) { showToast(data.message, 'error'); return; }
+  closeModal('add-complaint-modal');
+  showToast('Complaint submitted', 'success');
+  loadComplaints();
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast show ${type}`;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+document.addEventListener('DOMContentLoaded', loadComplaints);
+</script>
+</body></html>
