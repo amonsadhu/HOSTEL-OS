@@ -1,4 +1,4 @@
-HostelOS — Hostel Management System
+**HostelOS — Hostel Management System**
 
 A full-stack web application that digitizes and streamlines hostel administration — student registration, room allocation, fee management, complaint handling, attendance tracking, and notifications — through a centralized platform with separate Admin and Student portals.
 
