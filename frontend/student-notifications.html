@@ -163,7 +163,7 @@ const userType = localStorage.getItem('hostelos_type');
 const token    = localStorage.getItem('hostelos_token');
 if (!token || userType !== 'student') window.location.href = 'student-login.html';
 
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = 'https://hostel-os-e1os.onrender.com/api';
 function getToken() { return localStorage.getItem('hostelos_token'); }
 
 async function apiFetch(endpoint, options = {}) {
