@@ -94,7 +94,7 @@
         <div class="user-role" id="user-room">Room: —</div>
       </div>
     </div>
-    <button class="logout-btn" onclick="logout()">← Logout</button>
+    
   </div>
 </aside>
 
@@ -265,7 +265,7 @@ async function apiFetch(endpoint, options = {}) {
   return res.json();
 }
 
-function logout() { localStorage.clear(); window.location.href = 'student-login.html'; }
+
 
 function showToast(msg, type = '') {
   const t = document.getElementById('toast');

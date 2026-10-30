@@ -51,7 +51,7 @@
         <div class="user-role" id="user-room">Room: —</div>
       </div>
     </div>
-    <button class="logout-btn" onclick="logout()">← Logout</button>
+    
   </div>
 </aside>
 
@@ -172,10 +172,7 @@ function showToast(msg, type = '') {
   setTimeout(() => t.className = 'toast', 3000);
 }
 
-function logout() {
-  localStorage.clear();
-  window.location.href = 'student-login.html';
-}
+
 
 async function loadDashboard() {
   // GET /api/auth/me → get current student info
